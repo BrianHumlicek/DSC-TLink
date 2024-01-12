@@ -1,0 +1,37 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.6.33815.320
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DSC.TLink", "TLink\DSC.TLink.csproj", "{4AC3E854-294C-4076-B160-307BD055A5DC}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{A27F7FE0-A5FD-48FC-B575-F9BFDE9B7E40}"
+	ProjectSection(SolutionItems) = preProject
+		LICENSE HEADER.txt = LICENSE HEADER.txt
+		..\README.md = ..\README.md
+	EndProjectSection
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Demo", "Demo\Demo.csproj", "{1775557F-C808-441A-8D07-E4DEB5368A85}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{4AC3E854-294C-4076-B160-307BD055A5DC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4AC3E854-294C-4076-B160-307BD055A5DC}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4AC3E854-294C-4076-B160-307BD055A5DC}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4AC3E854-294C-4076-B160-307BD055A5DC}.Release|Any CPU.Build.0 = Release|Any CPU
+		{1775557F-C808-441A-8D07-E4DEB5368A85}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1775557F-C808-441A-8D07-E4DEB5368A85}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1775557F-C808-441A-8D07-E4DEB5368A85}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1775557F-C808-441A-8D07-E4DEB5368A85}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {57F0897C-0279-4830-95D1-D4D5E39FF3EB}
+	EndGlobalSection
+EndGlobal

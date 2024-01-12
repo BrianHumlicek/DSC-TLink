@@ -1,0 +1,21 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net7.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <OutputType>Library</OutputType>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Remove="ByteUtility.cs" />
+    <Compile Remove="DeviceHeaderInformation.cs" />
+    <Compile Remove="LegacyInstructionHelper.cs" />
+    <Compile Remove="TLInstructionHelper.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Remove="Tyco.TSP.Communications.Instructions.dll" />
+  </ItemGroup>
+
+</Project>
