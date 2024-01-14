@@ -4,7 +4,7 @@
 
 ## Goal
 
-This project is an attempt at communicating with a DSC Neo series alarm panel through a DSC TL280R communicator.  Ultimately, if I get the communication figured out, I want to use this information to create an integration for Home Assistant.
+This project is an attempt at communicating with a DSC Neo series alarm panel through a DSC TL280(R)E communicator.  Ultimately, if I get the communication figured out, I want to use this information to create an integration for Home Assistant.
 
 I would like to find collaborators that are either familier with Home Assistant integrations or other DSC integrations.  I know DSC has been around a long time, and I have seen several projects to communicate with older DSC hardware in various ways.  I suspect that once I get past the encryption the underlying protocol might be similar to something that is already exists.  If that proves to be true, then working with someone that is familier with 'how DSC does things' would be helpful.
 
