@@ -153,11 +153,11 @@ namespace DSC.TLink
 			IList<byte> block = payload.PopLeadingBytes(length);
 			if (length >= 3)
 			{
-                sessionState.MarketID   = block.PopLeadingByte();
-                sessionState.ApprovalID = block.PopLeadingByte();
-                sessionState.CustomerID = block.PopLeadingByte();
-            }
-            return true;
+				sessionState.MarketID   = block.PopLeadingByte();
+				sessionState.ApprovalID = block.PopLeadingByte();
+				sessionState.CustomerID = block.PopLeadingByte();
+			}
+			return true;
 		}
 		static bool parseSequence(IList<byte> payload, TLinkSessionState sessionState)
 		{
@@ -187,16 +187,16 @@ namespace DSC.TLink
             sessionState.ServiceRequest = new List<bool>();
 			foreach(byte b in block)
 			{
-                sessionState.ServiceRequest.Add(b.Bit7());
-                sessionState.ServiceRequest.Add(b.Bit6());
-                sessionState.ServiceRequest.Add(b.Bit5());
-                sessionState.ServiceRequest.Add(b.Bit4());
-                sessionState.ServiceRequest.Add(b.Bit3());
-                sessionState.ServiceRequest.Add(b.Bit2());
-                sessionState.ServiceRequest.Add(b.Bit1());
-                sessionState.ServiceRequest.Add(b.Bit0());
+				sessionState.ServiceRequest.Add(b.Bit7());
+				sessionState.ServiceRequest.Add(b.Bit6());
+				sessionState.ServiceRequest.Add(b.Bit5());
+				sessionState.ServiceRequest.Add(b.Bit4());
+				sessionState.ServiceRequest.Add(b.Bit3());
+				sessionState.ServiceRequest.Add(b.Bit2());
+				sessionState.ServiceRequest.Add(b.Bit1());
+				sessionState.ServiceRequest.Add(b.Bit0());
 				if (sessionState.ServiceRequest.Count >= 32) break;
-            }
+			}
             return true;
 		}
 		static bool parseBuildNumber(IList<byte> payload, TLinkSessionState sessionState)
