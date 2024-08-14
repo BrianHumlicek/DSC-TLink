@@ -72,14 +72,14 @@ namespace DSC.TLink
 
 			TLinkSessionState result = new TLinkSessionState();
 
-			result.DeviceType = payload.TrimLeadingWord();
-			result.SoftwareVersion = payload.TrimLeadingByte();
-			result.SoftwareRevision = payload.TrimLeadingByte();
-			result.LanguageID = payload.TrimLeadingWord();
+			result.DeviceType = payload.PopLeadingWord();
+			result.SoftwareVersion = payload.PopLeadingByte();
+			result.SoftwareRevision = payload.PopLeadingByte();
+			result.LanguageID = payload.PopLeadingWord();
 
-			int length = payload.TrimLeadingByte();
+			int length = payload.PopLeadingByte();
 			if (payload.Count < length) throw new Exception();
-			result.DeviceID = payload.TrimLeadingBytes(length).ToArray();
+			result.DeviceID = payload.PopLeadingBytes(length).ToArray();
 
 			if (!parseStatusBytes(payload, result))         return result;
 			if (!parseVariantData(payload, result))         return result;
@@ -96,10 +96,10 @@ namespace DSC.TLink
 		{
 			if (payload.Count < 2) return false;
 
-			int numberOfStatusBytes = payload.TrimLeadingByte() + 1;
+			int numberOfStatusBytes = payload.PopLeadingByte() + 1;
 			if (payload.Count < numberOfStatusBytes) throw new Exception();
 
-			byte statusByte = payload.TrimLeadingByte();
+			byte statusByte = payload.PopLeadingByte();
 
 			sessionState.CallbackEnabled          = statusByte.Bit0();
 			sessionState.EventBuffer75PercentFull = statusByte.Bit1();
@@ -112,7 +112,7 @@ namespace DSC.TLink
 
 			if (numberOfStatusBytes < 2) return true;
 
-			statusByte = payload.TrimLeadingByte();
+			statusByte = payload.PopLeadingByte();
 
 			sessionState.EnableDevice                    = statusByte.Bit0();
 			sessionState.DisableDevice                   = statusByte.Bit1();
@@ -125,7 +125,7 @@ namespace DSC.TLink
 
 			if (numberOfStatusBytes < 3) return true;
 
-			statusByte = payload.TrimLeadingByte();
+			statusByte = payload.PopLeadingByte();
 
 			sessionState.ConnectionTest       = statusByte.Bit0();
 			sessionState.CardDataChanged      = statusByte.Bit1();
@@ -137,7 +137,7 @@ namespace DSC.TLink
 
 			if (numberOfStatusBytes < 4) return true;
 
-			statusByte = payload.TrimLeadingByte();
+			statusByte = payload.PopLeadingByte();
 
 			sessionState.GSMPluginPresent = statusByte.Bit0();
 			sessionState.IPPluginPresent  = statusByte.Bit1();
@@ -147,58 +147,58 @@ namespace DSC.TLink
 		static bool parseVariantData(IList<byte> payload, TLinkSessionState sessionState)
 		{
 			if (payload.Count < 2) return false;
-			int length = payload.TrimLeadingByte();
+			int length = payload.PopLeadingByte();
 			if (payload.Count < length) throw new Exception();
-			IList<byte> block = payload.TrimLeadingBytes(length);
-			sessionState.MarketID   = block.TrimLeadingByte();
-			sessionState.ApprovalID = block.TrimLeadingByte();
-			sessionState.CustomerID = block.TrimLeadingByte();
+			IList<byte> block = payload.PopLeadingBytes(length);
+			sessionState.MarketID   = block.PopLeadingByte();
+			sessionState.ApprovalID = block.PopLeadingByte();
+			sessionState.CustomerID = block.PopLeadingByte();
 			return true;
 		}
 		static bool parseSequence(IList<byte> payload, TLinkSessionState sessionState)
 		{
 			if (payload.Count < 2) return false;
-			int length = payload.TrimLeadingByte();
+			int length = payload.PopLeadingByte();
 			
 			if (payload.Count < length) throw new Exception();
 
 			if (length == 1)
 			{
-				sessionState.SequenceNumber = payload.TrimLeadingByte();
+				sessionState.SequenceNumber = payload.PopLeadingByte();
 			}
 			else if (length > 1)
 			{
-				sessionState.SequenceNumber = payload.TrimLeadingWord();
+				sessionState.SequenceNumber = payload.PopLeadingWord();
 			}
 			return true;
 		}
 		static bool parseServiceRequestData(IList<byte> payload, TLinkSessionState sessionState)
 		{
 			if (payload.Count < 2) return false;
-			int length = payload.TrimLeadingByte();
+			int length = payload.PopLeadingByte();
 
 			if (payload.Count < length) throw new Exception();
 
-			IList<byte> block = payload.TrimLeadingBytes(length);
+			IList<byte> block = payload.PopLeadingBytes(length);
 			//Implementation
 			return true;
 		}
 		static bool parseBuildNumber(IList<byte> payload, TLinkSessionState sessionState)
 		{
 			if (payload.Count < 2) return false;
-			int length = payload.TrimLeadingByte();
+			int length = payload.PopLeadingByte();
 
 			if (payload.Count < length) throw new Exception();
 
-			IList<byte> block = payload.TrimLeadingBytes(length);
+			IList<byte> block = payload.PopLeadingBytes(length);
 
 			if (block.Count > 0)
 			{
-				sessionState.TestVersion = block.TrimLeadingByte();
+				sessionState.TestVersion = block.PopLeadingByte();
 			}
 			if (block.Count > 0)
 			{
-				sessionState.TestRevision = block.TrimLeadingByte();
+				sessionState.TestRevision = block.PopLeadingByte();
 			}
 
 			return true;
@@ -206,33 +206,33 @@ namespace DSC.TLink
 		static bool parseKeyID(IList<byte> payload, TLinkSessionState sessionState)
 		{
 			if (payload.Count < 2) return false;
-			int length = payload.TrimLeadingByte();
+			int length = payload.PopLeadingByte();
 
 			if (payload.Count < length) throw new Exception();
 
-			sessionState.KeyID = payload.TrimLeadingBytes(length).ToArray();
+			sessionState.KeyID = payload.PopLeadingBytes(length).ToArray();
 
 			return true;
 		}
 		static bool parseAdditionalInfo(IList<byte> payload, TLinkSessionState sessionState)
 		{
 			if (payload.Count < 2) return false;
-			int length = payload.TrimLeadingByte();
+			int length = payload.PopLeadingByte();
 
 			if (payload.Count < length) throw new Exception();
 
-			IList<byte> block = payload.TrimLeadingBytes(length);
+			IList<byte> block = payload.PopLeadingBytes(length);
 			//Implementation
 			return true;
 		}
 		static bool parseCommunicatorVersion(IList<byte> payload, TLinkSessionState sessionState)
 		{
 			if (payload.Count < 2) return false;
-			int length = payload.TrimLeadingByte();
+			int length = payload.PopLeadingByte();
 
 			if (payload.Count < length) throw new Exception();
 
-			sessionState.CommunicatorVersion = payload.TrimLeadingBytes(length).ToArray();
+			sessionState.CommunicatorVersion = payload.PopLeadingBytes(length).ToArray();
 
 			return true;
 		}

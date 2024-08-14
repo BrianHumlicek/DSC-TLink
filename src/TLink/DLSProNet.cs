@@ -25,7 +25,7 @@ namespace DSC.TLink
 
 			if (payload.Count < 15) throw new ArgumentException("Parsed payload length is too short");
 
-			int encodedCRC = payload.TrimTrailingWord();
+			int encodedCRC = payload.PopTrailingWord();
 
 			if (encodedCRC != CalculateCRC(payload)) throw new ArgumentException("Parsed header CRC is invalid");
 
@@ -83,7 +83,7 @@ namespace DSC.TLink
 						payload.Add(enumerator.Current);
 						if (!enumerator.MoveNext()) throw new Exception();
 						payload.Add(enumerator.Current);
-						remainingPayloadBytes = payload.GetTrailingWord();
+						remainingPayloadBytes = payload.PeekTrailingWord();
 						workingList = payload;
 						continue;
 					}
