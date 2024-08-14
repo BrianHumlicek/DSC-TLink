@@ -184,7 +184,7 @@ namespace DSC.TLink
 			if (payload.Count < length) throw new Exception();
 
 			IList<byte> block = payload.PopLeadingBytes(length);
-            sessionState.ServiceRequest = new List<bool>();
+			sessionState.ServiceRequest = new List<bool>();
 			foreach(byte b in block)
 			{
 				sessionState.ServiceRequest.Add(b.Bit7());
@@ -197,7 +197,7 @@ namespace DSC.TLink
 				sessionState.ServiceRequest.Add(b.Bit0());
 				if (sessionState.ServiceRequest.Count >= 32) break;
 			}
-            return true;
+			return true;
 		}
 		static bool parseBuildNumber(IList<byte> payload, TLinkSessionState sessionState)
 		{
