@@ -97,8 +97,8 @@ namespace DSC.TLink
 			{
 				switch (enumerator.Current)
 				{
-					case 0x7D:
-						if (!enumerator.MoveNext()) throw new TLinkPacketException("No end of frame delimiter");
+					case 0x7D:	//Stuffed byte
+						if (!enumerator.MoveNext()) goto UnexpectedEndOfPacket;
 						switch (enumerator.Current)
 						{
 							case 0:
@@ -126,17 +126,18 @@ namespace DSC.TLink
 						break;
 				}
 			}
+			UnexpectedEndOfPacket:
 			throw new TLinkPacketException("No end of frame delimiter");
 		}
 		byte[] decrypt(IEnumerable<byte> cipherText)
 		{
-			byte[] cipherTextArray = cipherText.ToArray();
+			byte[] cipherTextArray = cipherText.Pad16().ToArray();
 
 			byte[] plainText = new byte[cipherTextArray.Length];
 
-			using (ICryptoTransform transform = AES.CreateDecryptor())
+			using (ICryptoTransform decryptor = AES.CreateDecryptor())
 			{
-				transform.TransformBlock(cipherTextArray, 0, cipherTextArray.Length, plainText, 0);
+				decryptor.TransformBlock(cipherTextArray, 0, cipherTextArray.Length, plainText, 0);
 			}
 
 			return plainText;
@@ -145,9 +146,9 @@ namespace DSC.TLink
 		{
 			byte[] cipherText = new byte[plainText.Length];
 
-			using (ICryptoTransform transform = AES.CreateEncryptor())
+			using (ICryptoTransform encryptor = AES.CreateEncryptor())
 			{
-				transform.TransformBlock(plainText, 0, plainText.Length, cipherText, 0);
+				encryptor.TransformBlock(plainText, 0, plainText.Length, cipherText, 0);
 			}
 
 			return cipherText;
