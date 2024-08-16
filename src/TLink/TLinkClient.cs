@@ -15,6 +15,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
@@ -25,68 +26,107 @@ using DSC.TLink.Extensions;
 
 namespace DSC.TLink
 {
-    public class TLinkClient : IDisposable
+	public class TLinkClient : IDisposable
 	{
-		TLinkSessionState session;
-		TcpClient? tcpClient;
-		NetworkStream? stream;
-
+		protected TLinkSessionState? session;
+		TcpClient tcpClient;
 		Aes AES;
+		byte[] sendHeader;
 		public TLinkClient()
 		{
-			AES = Aes.Create();
-			AES.Mode = CipherMode.ECB;
-			AES.Padding = PaddingMode.None;
-		}
-		public void Connect(IPEndPoint target)
+            tcpClient = new TcpClient();
+            tcpClient.ReceiveTimeout = 1000;
+
+            AES = Aes.Create();
+            AES.Mode = CipherMode.ECB;
+            AES.Padding = PaddingMode.None;
+
+			sendHeader = new byte[] { 1, 202, 254 };	//TODO: Figure out what this is supposed to be
+        }
+		public void Connect(IPAddress address)
 		{
-			initializeTcpClient(target);
-			List<byte> packet = readPacket();
-			var payload = Parse(packet);
+			Connect(new IPEndPoint(address, 3062));
+		}
+        public void Connect(IPEndPoint endPoint)
+		{
+            tcpClient.Connect(endPoint);
 
-			session = DLSProNet.ParseConnectPacket(payload);
+			var message = ReadMessage();
 
-			if (UseEncryption)
+			session = DLSProNet.ParseConnectPacket(message);
+
+			if (useEncryption)
 			{
 				AES.Key = GSEncryptionKeyGenerator.FromSessionState(session);
 			}
 		}
 
-		bool UseEncryption => session?.Encrypted ?? false;
-		void initializeTcpClient(IPEndPoint target)
+		public List<byte> ReadMessage()
 		{
-			tcpClient?.Dispose();
-			tcpClient = new TcpClient();
-			tcpClient.ReceiveTimeout = 1000;
-			tcpClient.Connect(target);
-			stream = tcpClient.GetStream();
-		}
-		List<byte> readPacket()
-		{
-			int length = IListExtensions.Bytes2Word(readByte(), readByte());
-			List<byte> result = new List<byte>(length);
-			for (int i = 0; i < length; i++)
-			{
-				result.Add(readByte());
-			}
-			return result;
-		}
-		byte readByte()
-		{
-			int result = stream.ReadByte();
-			if (result == -1) throw new TLinkPacketException("Unexpected end of TCP stream");
-			return (byte)result;
-		}
-		public List<byte> Parse(IList<byte> packet)
-		{
-			IEnumerable<byte> packetEnumerable = UseEncryption ? decrypt(packet) : packet;
+            byte[] packet = readPacket();
 
-			(List<byte> header, List<byte> payload) = parseFraming(packetEnumerable);
+            if (useEncryption)
+            {
+                packet = decrypt(packet);
+            }
+
+            (List<byte> header, List<byte> payload) = parsePacket(packet);
 
 			return payload;
-		}
+        }
 
-		static (List<byte>, List<byte>) parseFraming(IEnumerable<byte> packetBytes)
+		public void SendMessage(byte[] message)
+		{
+			var packet = encodePacket(sendHeader, message);
+
+			if (useEncryption)
+			{
+                packet = encrypt(packet);
+			}
+
+			ushort lengthWord = (ushort)packet.Length;
+
+			byte[] lengthBytes = new byte[] { lengthWord.HighByte(), lengthWord.LowByte() };
+
+			packet = lengthBytes.Concat(packet).ToArray();
+
+            tcpClient.GetStream().Write(packet, 0, packet.Length);
+        }
+
+		public string ReadMessageBCD() => Array2HexString(ReadMessage());
+		public void SendMessageBCD(string bcdMessage) => SendMessage(HexString2Array(bcdMessage));
+        public static byte[] HexString2Array(string hexString)
+        {
+            return hexString.Split('-').Select(s => byte.Parse(s, NumberStyles.HexNumber)).ToArray();
+        }
+        public static string Array2HexString(IEnumerable<byte> bytes)
+        {
+            return String.Join('-', bytes.Select(b => $"{b:X2}"));
+        }
+
+        bool useEncryption => session?.Encrypted ?? false;
+
+        protected virtual byte[] readPacket()
+		{
+			var tcpStream = tcpClient.GetStream();
+
+			int length = IListExtensions.Bytes2Word(readByte(), readByte());
+			byte[] result = new byte[length];
+			for (int i = 0; i < length; i++)
+			{
+				result[i] = readByte();
+			}
+			return result;
+
+            byte readByte()
+            {
+                int result = tcpStream.ReadByte();
+                if (result == -1) throw new TLinkPacketException("Unexpected end of TCP stream");
+                return (byte)result;
+            }
+        }
+
+		(List<byte>, List<byte>) parsePacket(IEnumerable<byte> packetBytes)
 		{
 			List<byte> header = new List<byte>();
 			List<byte> payload = new List<byte>();
@@ -129,21 +169,53 @@ namespace DSC.TLink
 			UnexpectedEndOfPacket:
 			throw new TLinkPacketException("No end of frame delimiter");
 		}
-		byte[] decrypt(IEnumerable<byte> cipherText)
-		{
-			byte[] cipherTextArray = cipherText.Pad16().ToArray();
 
-			byte[] plainText = new byte[cipherTextArray.Length];
+		byte[] encodePacket(IEnumerable<byte> header, IEnumerable<byte> payload)
+		{
+			return stuffBytes(header).Concat(0x7E).Concat(stuffBytes(payload)).Concat(0x7F).ToArray();
+
+			IEnumerable<byte> stuffBytes(IEnumerable<byte> inputBytes)
+			{
+				foreach(byte b in inputBytes)
+				{
+					switch (b)
+					{
+						case 0x7D:
+							yield return 0x7D;
+							yield return 0x00;
+							break;
+                        case 0x7E:
+                            yield return 0x7D;
+                            yield return 0x01;
+                            break;
+                        case 0x7F:
+                            yield return 0x7D;
+                            yield return 0x02;
+                            break;
+						default:
+							yield return b;
+							break;
+                    }
+                }
+			}
+		}
+		byte[] decrypt(byte[] cipherText)
+		{
+			cipherText = cipherText.Pad16().ToArray();
+
+			byte[] plainText = new byte[cipherText.Length];
 
 			using (ICryptoTransform decryptor = AES.CreateDecryptor())
 			{
-				decryptor.TransformBlock(cipherTextArray, 0, cipherTextArray.Length, plainText, 0);
+				decryptor.TransformBlock(cipherText, 0, cipherText.Length, plainText, 0);
 			}
 
 			return plainText;
 		}
 		byte[] encrypt(byte[] plainText)
 		{
+			plainText = plainText.Pad16().ToArray();
+
 			byte[] cipherText = new byte[plainText.Length];
 
 			using (ICryptoTransform encryptor = AES.CreateEncryptor())
@@ -153,10 +225,10 @@ namespace DSC.TLink
 
 			return cipherText;
 		}
-
 		public void Dispose()
 		{
 			tcpClient?.Dispose();
+			AES?.Dispose();
 		}
 	}
 }
