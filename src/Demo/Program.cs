@@ -36,5 +36,5 @@ namespace DSC.TLink
                 Console.ReadKey();
             }
         }
-	}
+    }
 }

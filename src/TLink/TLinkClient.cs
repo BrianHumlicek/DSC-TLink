@@ -32,24 +32,26 @@ namespace DSC.TLink
 		TcpClient tcpClient;
 		Aes AES;
 		byte[] sendHeader;
+
 		public TLinkClient()
 		{
-            tcpClient = new TcpClient();
-            tcpClient.ReceiveTimeout = 1000;
+			tcpClient = new TcpClient();
+			tcpClient.ReceiveTimeout = 1000;
 
-            AES = Aes.Create();
-            AES.Mode = CipherMode.ECB;
-            AES.Padding = PaddingMode.None;
+			AES = Aes.Create();
+			AES.Mode = CipherMode.ECB;
+			AES.Padding = PaddingMode.None;
 
 			sendHeader = new byte[] { 1, 202, 254 };	//TODO: Figure out what this is supposed to be
-        }
+		}
+
 		public void Connect(IPAddress address)
 		{
 			Connect(new IPEndPoint(address, 3062));
 		}
-        public void Connect(IPEndPoint endPoint)
+		public void Connect(IPEndPoint endPoint)
 		{
-            tcpClient.Connect(endPoint);
+			tcpClient.Connect(endPoint);
 
 			var message = ReadMessage();
 
@@ -63,17 +65,17 @@ namespace DSC.TLink
 
 		public List<byte> ReadMessage()
 		{
-            byte[] packet = readPacket();
+			byte[] packet = readPacket();
 
-            if (useEncryption)
-            {
-                packet = decrypt(packet);
-            }
+			if (useEncryption)
+			{
+				packet = decrypt(packet);
+			}
 
-            (List<byte> header, List<byte> payload) = parsePacket(packet);
+			(List<byte> header, List<byte> payload) = parsePacket(packet);
 
 			return payload;
-        }
+		}
 
 		public void SendMessage(byte[] message)
 		{
@@ -81,7 +83,7 @@ namespace DSC.TLink
 
 			if (useEncryption)
 			{
-                packet = encrypt(packet);
+				packet = encrypt(packet);
 			}
 
 			ushort lengthWord = (ushort)packet.Length;
@@ -90,23 +92,23 @@ namespace DSC.TLink
 
 			packet = lengthBytes.Concat(packet).ToArray();
 
-            tcpClient.GetStream().Write(packet, 0, packet.Length);
-        }
+			tcpClient.GetStream().Write(packet, 0, packet.Length);
+		}
 
 		public string ReadMessageBCD() => Array2HexString(ReadMessage());
 		public void SendMessageBCD(string bcdMessage) => SendMessage(HexString2Array(bcdMessage));
-        public static byte[] HexString2Array(string hexString)
-        {
-            return hexString.Split('-').Select(s => byte.Parse(s, NumberStyles.HexNumber)).ToArray();
-        }
-        public static string Array2HexString(IEnumerable<byte> bytes)
-        {
-            return String.Join('-', bytes.Select(b => $"{b:X2}"));
-        }
+		public static byte[] HexString2Array(string hexString)
+		{
+			return hexString.Split('-').Select(s => byte.Parse(s, NumberStyles.HexNumber)).ToArray();
+		}
+		public static string Array2HexString(IEnumerable<byte> bytes)
+		{
+			return String.Join('-', bytes.Select(b => $"{b:X2}"));
+		}
 
-        bool useEncryption => session?.Encrypted ?? false;
+		bool useEncryption => session?.Encrypted ?? false;
 
-        protected virtual byte[] readPacket()
+		protected virtual byte[] readPacket()
 		{
 			var tcpStream = tcpClient.GetStream();
 
@@ -118,13 +120,13 @@ namespace DSC.TLink
 			}
 			return result;
 
-            byte readByte()
-            {
-                int result = tcpStream.ReadByte();
-                if (result == -1) throw new TLinkPacketException("Unexpected end of TCP stream");
-                return (byte)result;
-            }
-        }
+			byte readByte()
+			{
+				int result = tcpStream.ReadByte();
+				if (result == -1) throw new TLinkPacketException("Unexpected end of TCP stream");
+				return (byte)result;
+			}
+		}
 
 		(List<byte>, List<byte>) parsePacket(IEnumerable<byte> packetBytes)
 		{
@@ -184,19 +186,19 @@ namespace DSC.TLink
 							yield return 0x7D;
 							yield return 0x00;
 							break;
-                        case 0x7E:
-                            yield return 0x7D;
-                            yield return 0x01;
-                            break;
-                        case 0x7F:
-                            yield return 0x7D;
-                            yield return 0x02;
-                            break;
+						case 0x7E:
+							yield return 0x7D;
+							yield return 0x01;
+							break;
+						case 0x7F:
+							yield return 0x7D;
+							yield return 0x02;
+							break;
 						default:
 							yield return b;
 							break;
-                    }
-                }
+					}
+				}
 			}
 		}
 		byte[] decrypt(byte[] cipherText)
