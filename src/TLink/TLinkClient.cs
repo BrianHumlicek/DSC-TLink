@@ -28,7 +28,7 @@ namespace DSC.TLink
 {
 	public class TLinkClient : IDisposable
 	{
-		protected TLinkSessionState? session;
+        protected DeviceHeader? deviceHeader;
 		TcpClient tcpClient;
 		Aes AES;
 		byte[] sendHeader;
@@ -55,11 +55,11 @@ namespace DSC.TLink
 
 			var message = ReadMessage();
 
-			session = DLSProNet.ParseConnectPacket(message);
+			deviceHeader = DLSProNetHeader.ParseInitialHeader(message);
 
 			if (useEncryption)
 			{
-				AES.Key = GSEncryptionKeyGenerator.FromSessionState(session);
+				AES.Key = GSEncryptionKeyGenerator.FromDeviceHeader(deviceHeader);
 			}
 		}
 
@@ -106,11 +106,11 @@ namespace DSC.TLink
 			return String.Join('-', bytes.Select(b => $"{b:X2}"));
 		}
 
-		bool useEncryption => session?.Encrypted ?? false;
+		bool useEncryption => deviceHeader?.Encrypted ?? false;
 
 		protected virtual byte[] readPacket()
 		{
-			var tcpStream = tcpClient.GetStream();
+			NetworkStream tcpStream = tcpClient.GetStream();
 
 			int length = IListExtensions.Bytes2Word(readByte(), readByte());
 			byte[] result = new byte[length];
@@ -130,7 +130,7 @@ namespace DSC.TLink
 
 		(List<byte>, List<byte>) parsePacket(IEnumerable<byte> packetBytes)
 		{
-			List<byte> header = new List<byte>();
+			List<byte> header = new List<byte>();	//This is called ConsoleHeader on the connect packet and is always 5 bytes long in the connect packet
 			List<byte> payload = new List<byte>();
 			List<byte> workingList = header;
 

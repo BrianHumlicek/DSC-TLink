@@ -149,25 +149,25 @@ namespace DSC.TLink
 			 61,
 			 51
 		};
-		public static byte[] FromSessionState(TLinkSessionState sessionState)
+		public static byte[] FromDeviceHeader(DeviceHeader deviceHeader)
 		{
-			List<byte> result = sessionState.KeyID.ToList();
+			List<byte> result = deviceHeader.KeyID.ToList();
 			crc16(result, 0);
-			byte version1 = (byte)(sessionState.SoftwareVersion >> 4);
-			byte version2 = (byte)(sessionState.SoftwareVersion << 4 | sessionState.SoftwareRevision & 0x0F);
-			byte testVersion = sessionState.TestVersion;
-			byte testRevision = sessionState.TestRevision;
-			if (sessionState.CommunicatorVersion != null)
+			byte version1 = (byte)(deviceHeader.SoftwareVersion >> 4);
+			byte version2 = (byte)(deviceHeader.SoftwareVersion << 4 | deviceHeader.SoftwareRevision & 0x0F);
+			byte testVersion = deviceHeader.TestVersion;
+			byte testRevision = deviceHeader.TestRevision;
+			if (deviceHeader.CommunicatorVersion != null)
 			{
-				if (sessionState.CommunicatorVersion.Length >= 2)
+				if (deviceHeader.CommunicatorVersion.Length >= 2)
 				{
-					version1 = (byte)(sessionState.CommunicatorVersion[0] >> 4);
-					version2 = (byte)(sessionState.CommunicatorVersion[0] << 4 | sessionState.CommunicatorVersion[1] & 15);
+					version1 = (byte)(deviceHeader.CommunicatorVersion[0] >> 4);
+					version2 = (byte)(deviceHeader.CommunicatorVersion[0] << 4 | deviceHeader.CommunicatorVersion[1] & 15);
 				}
-				if (sessionState.CommunicatorVersion.Length >= 4)
+				if (deviceHeader.CommunicatorVersion.Length >= 4)
 				{
-					testVersion = sessionState.CommunicatorVersion[2];
-					testRevision = sessionState.CommunicatorVersion[3];
+					testVersion = deviceHeader.CommunicatorVersion[2];
+					testRevision = deviceHeader.CommunicatorVersion[3];
 				}
 			}
 			result.Add(version1);
