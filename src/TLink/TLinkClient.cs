@@ -28,7 +28,7 @@ namespace DSC.TLink
 {
 	public class TLinkClient : IDisposable
 	{
-        protected DeviceHeader? deviceHeader;
+		protected DeviceHeader? deviceHeader;
 		TcpClient tcpClient;
 		Aes AES;
 		byte[] consoleHeader = { 1, 0xCA, 0xFE };	//Default console header
@@ -46,8 +46,8 @@ namespace DSC.TLink
 
 		public void Connect(IPAddress address, ushort installerCode)
 		{
-            //port 3092 seems to have something too.  3064 is the "ReceiverPort"
-            Connect(new IPEndPoint(address, 3062), installerCode);
+			//port 3092 seems to have something too.  3064 is the "ReceiverPort"
+			Connect(new IPEndPoint(address, 3062), installerCode);
 		}
 
 		/// <summary>
@@ -57,7 +57,7 @@ namespace DSC.TLink
 		/// <param name="installerCode">[851][011] GS / IP Installer Code</param>
 		public void Connect(IPEndPoint endPoint, ushort installerCode)
 		{
-            tcpClient.Connect(endPoint);
+			tcpClient.Connect(endPoint);
 
 			var message = ReadMessage();
 
@@ -68,10 +68,10 @@ namespace DSC.TLink
 				AES.Key = TLinkAESKeyGenerator.FromDeviceHeader(deviceHeader);
 			}
 
-            consoleHeader = new byte[] { dataMode, installerCode.HighByte(), installerCode.LowByte() };
-        }
+			consoleHeader = new byte[] { dataMode, installerCode.HighByte(), installerCode.LowByte() };
+		}
 
-        public List<byte> ReadMessage()
+		public List<byte> ReadMessage()
 		{
 			byte[] packet = readPacket();
 

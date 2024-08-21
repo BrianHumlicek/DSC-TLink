@@ -17,7 +17,7 @@ using DSC.TLink.Extensions;
 
 namespace DSC.TLink
 {
-    public class DLSProNetHeader : DeviceHeader
+	public class DLSProNetHeader : DeviceHeader
 	{
 		public static DeviceHeader ParseInitialHeader(List<byte> packetBytes) 
 		{
@@ -106,189 +106,189 @@ namespace DSC.TLink
 
 			return (header, payload);
 		}
-        static DLSProNetHeader ParseDeviceHeader(IList<byte> payload)
-        {
-            if (payload.Count < 8) throw new Exception();
+		static DLSProNetHeader ParseDeviceHeader(IList<byte> payload)
+		{
+			if (payload.Count < 8) throw new Exception();
 
-            DLSProNetHeader deviceHeader = new DLSProNetHeader();
+			DLSProNetHeader deviceHeader = new DLSProNetHeader();
 
-            deviceHeader.DeviceType =       payload.PopLeadingWord();
-            deviceHeader.SoftwareVersion =  payload.PopLeadingByte();
-            deviceHeader.SoftwareRevision = payload.PopLeadingByte();
-            deviceHeader.LanguageID =       payload.PopLeadingWord();
+			deviceHeader.DeviceType =       payload.PopLeadingWord();
+			deviceHeader.SoftwareVersion =  payload.PopLeadingByte();
+			deviceHeader.SoftwareRevision = payload.PopLeadingByte();
+			deviceHeader.LanguageID =       payload.PopLeadingWord();
 
-            int length = payload.PopLeadingByte();
-            if (payload.Count < length) throw new Exception();
-            deviceHeader.DeviceID = payload.PopLeadingBytes(length).ToArray();
+			int length = payload.PopLeadingByte();
+			if (payload.Count < length) throw new Exception();
+			deviceHeader.DeviceID = payload.PopLeadingBytes(length).ToArray();
 
-            if (!parseStatusBytes(payload, deviceHeader))         return deviceHeader;
-            if (!parseVariantData(payload, deviceHeader))         return deviceHeader;
-            if (!parseSequence(payload, deviceHeader))            return deviceHeader;
-            if (!parseServiceRequestData(payload, deviceHeader))  return deviceHeader;
-            if (!parseBuildNumber(payload, deviceHeader))         return deviceHeader;
-            if (!parseKeyID(payload, deviceHeader))               return deviceHeader;
-            if (!parseAdditionalInfo(payload, deviceHeader))      return deviceHeader;
-            if (!parseCommunicatorVersion(payload, deviceHeader)) return deviceHeader;
-            return deviceHeader;
-        }
-        static bool parseStatusBytes(IList<byte> payload, DLSProNetHeader deviceHeader)
-        {
-            if (payload.Count < 2) return false;
+			if (!parseStatusBytes(payload, deviceHeader))         return deviceHeader;
+			if (!parseVariantData(payload, deviceHeader))         return deviceHeader;
+			if (!parseSequence(payload, deviceHeader))            return deviceHeader;
+			if (!parseServiceRequestData(payload, deviceHeader))  return deviceHeader;
+			if (!parseBuildNumber(payload, deviceHeader))         return deviceHeader;
+			if (!parseKeyID(payload, deviceHeader))               return deviceHeader;
+			if (!parseAdditionalInfo(payload, deviceHeader))      return deviceHeader;
+			if (!parseCommunicatorVersion(payload, deviceHeader)) return deviceHeader;
+			return deviceHeader;
+		}
+		static bool parseStatusBytes(IList<byte> payload, DLSProNetHeader deviceHeader)
+		{
+			if (payload.Count < 2) return false;
 
-            int numberOfStatusBytes = payload.PopLeadingByte();
-            if (payload.Count < numberOfStatusBytes) throw new Exception();
+			int numberOfStatusBytes = payload.PopLeadingByte();
+			if (payload.Count < numberOfStatusBytes) throw new Exception();
 
-            byte statusByte = payload.PopLeadingByte();
+			byte statusByte = payload.PopLeadingByte();
 
-            deviceHeader.CallbackEnabled =          statusByte.Bit0();
-            deviceHeader.EventBuffer75PercentFull = statusByte.Bit1();
-            deviceHeader.FirstTimeUploadCall =      statusByte.Bit2();
-            deviceHeader.MaintenanceCall =          statusByte.Bit3();
-            deviceHeader.AutoMaintenanceCall =      statusByte.Bit4();
-            deviceHeader.PeriodicCall =             statusByte.Bit5();
-            deviceHeader.OnlinePCLink =             statusByte.Bit6();
-            deviceHeader.Insert15FFs =              statusByte.Bit7();
+			deviceHeader.CallbackEnabled =          statusByte.Bit0();
+			deviceHeader.EventBuffer75PercentFull = statusByte.Bit1();
+			deviceHeader.FirstTimeUploadCall =      statusByte.Bit2();
+			deviceHeader.MaintenanceCall =          statusByte.Bit3();
+			deviceHeader.AutoMaintenanceCall =      statusByte.Bit4();
+			deviceHeader.PeriodicCall =             statusByte.Bit5();
+			deviceHeader.OnlinePCLink =             statusByte.Bit6();
+			deviceHeader.Insert15FFs =              statusByte.Bit7();
 
-            if (numberOfStatusBytes < 2) return true;
+			if (numberOfStatusBytes < 2) return true;
 
-            statusByte = payload.PopLeadingByte();
+			statusByte = payload.PopLeadingByte();
 
-            deviceHeader.EnableDevice =                    statusByte.Bit0();
-            deviceHeader.DisableDevice =                   statusByte.Bit1();
-            deviceHeader.DeviceProgrammedSinceLastUpload = statusByte.Bit2();
-            deviceHeader.FlashUpgradeCall =                statusByte.Bit3();
-            deviceHeader.SirenEnabled =                    statusByte.Bit4();
-            deviceHeader.CommercialFire =                  statusByte.Bit5();
-            deviceHeader.DynamicPasswordRequest =          statusByte.Bit6();
-            deviceHeader.TwoByteCommandLength =            statusByte.Bit7();
+			deviceHeader.EnableDevice =                    statusByte.Bit0();
+			deviceHeader.DisableDevice =                   statusByte.Bit1();
+			deviceHeader.DeviceProgrammedSinceLastUpload = statusByte.Bit2();
+			deviceHeader.FlashUpgradeCall =                statusByte.Bit3();
+			deviceHeader.SirenEnabled =                    statusByte.Bit4();
+			deviceHeader.CommercialFire =                  statusByte.Bit5();
+			deviceHeader.DynamicPasswordRequest =          statusByte.Bit6();
+			deviceHeader.TwoByteCommandLength =            statusByte.Bit7();
 
-            if (numberOfStatusBytes < 3) return true;
+			if (numberOfStatusBytes < 3) return true;
 
-            statusByte = payload.PopLeadingByte();
+			statusByte = payload.PopLeadingByte();
 
-            deviceHeader.ConnectionTest =       statusByte.Bit0();
-            deviceHeader.CardDataChanged =      statusByte.Bit1();
-            deviceHeader.ParameterDataChanged = statusByte.Bit2();
-            deviceHeader.FirmwareUpdated =      statusByte.Bit3();
-            deviceHeader.Encrypted =            statusByte.Bit4();
-            deviceHeader.GSMCommunication =     statusByte.Bit5();
-            deviceHeader.SessionAlreadyActive = statusByte.Bit6();
+			deviceHeader.ConnectionTest =       statusByte.Bit0();
+			deviceHeader.CardDataChanged =      statusByte.Bit1();
+			deviceHeader.ParameterDataChanged = statusByte.Bit2();
+			deviceHeader.FirmwareUpdated =      statusByte.Bit3();
+			deviceHeader.Encrypted =            statusByte.Bit4();
+			deviceHeader.GSMCommunication =     statusByte.Bit5();
+			deviceHeader.SessionAlreadyActive = statusByte.Bit6();
 
-            if (numberOfStatusBytes < 4) return true;
+			if (numberOfStatusBytes < 4) return true;
 
-            statusByte = payload.PopLeadingByte();
+			statusByte = payload.PopLeadingByte();
 
-            deviceHeader.GSMPluginPresent = statusByte.Bit0();
-            deviceHeader.IPPluginPresent =  statusByte.Bit1();
+			deviceHeader.GSMPluginPresent = statusByte.Bit0();
+			deviceHeader.IPPluginPresent =  statusByte.Bit1();
 
-            return true;
-        }
-        static bool parseVariantData(IList<byte> payload, DLSProNetHeader deviceHeader)
-        {
-            if (payload.Count < 2) return false;
-            int length = payload.PopLeadingByte();
-            if (payload.Count < length) throw new Exception();
-            IList<byte> block = payload.PopLeadingBytes(length);
-            if (length >= 3)
-            {
-                deviceHeader.MarketID =   block.PopLeadingByte();
-                deviceHeader.ApprovalID = block.PopLeadingByte();
-                deviceHeader.CustomerID = block.PopLeadingByte();
-            }
-            return true;
-        }
-        static bool parseSequence(IList<byte> payload, DLSProNetHeader deviceHeader)
-        {
-            if (payload.Count < 2) return false;
-            int length = payload.PopLeadingByte();
+			return true;
+		}
+		static bool parseVariantData(IList<byte> payload, DLSProNetHeader deviceHeader)
+		{
+			if (payload.Count < 2) return false;
+			int length = payload.PopLeadingByte();
+			if (payload.Count < length) throw new Exception();
+			IList<byte> block = payload.PopLeadingBytes(length);
+			if (length >= 3)
+			{
+				deviceHeader.MarketID =   block.PopLeadingByte();
+				deviceHeader.ApprovalID = block.PopLeadingByte();
+				deviceHeader.CustomerID = block.PopLeadingByte();
+			}
+			return true;
+		}
+		static bool parseSequence(IList<byte> payload, DLSProNetHeader deviceHeader)
+		{
+			if (payload.Count < 2) return false;
+			int length = payload.PopLeadingByte();
 
-            if (payload.Count < length) throw new Exception();
+			if (payload.Count < length) throw new Exception();
 
-            if (length == 1)
-            {
-                deviceHeader.SequenceNumber = payload.PopLeadingByte();
-            }
-            else if (length > 1)
-            {
-                deviceHeader.SequenceNumber = payload.PopLeadingWord();
-            }
-            return true;
-        }
-        static bool parseServiceRequestData(IList<byte> payload, DLSProNetHeader deviceHeader)
-        {
-            if (payload.Count < 2) return false;
-            int length = payload.PopLeadingByte();
+			if (length == 1)
+			{
+				deviceHeader.SequenceNumber = payload.PopLeadingByte();
+			}
+			else if (length > 1)
+			{
+				deviceHeader.SequenceNumber = payload.PopLeadingWord();
+			}
+			return true;
+		}
+		static bool parseServiceRequestData(IList<byte> payload, DLSProNetHeader deviceHeader)
+		{
+			if (payload.Count < 2) return false;
+			int length = payload.PopLeadingByte();
 
-            if (payload.Count < length) throw new Exception();
+			if (payload.Count < length) throw new Exception();
 
-            IList<byte> block = payload.PopLeadingBytes(length);
-            deviceHeader.ServiceRequest = new List<bool>();
-            foreach (byte b in block)
-            {
-                deviceHeader.ServiceRequest.Add(b.Bit7());
-                deviceHeader.ServiceRequest.Add(b.Bit6());
-                deviceHeader.ServiceRequest.Add(b.Bit5());
-                deviceHeader.ServiceRequest.Add(b.Bit4());
-                deviceHeader.ServiceRequest.Add(b.Bit3());
-                deviceHeader.ServiceRequest.Add(b.Bit2());
-                deviceHeader.ServiceRequest.Add(b.Bit1());
-                deviceHeader.ServiceRequest.Add(b.Bit0());
-                if (deviceHeader.ServiceRequest.Count >= 32) break;
-            }
-            return true;
-        }
-        static bool parseBuildNumber(IList<byte> payload, DLSProNetHeader deviceHeader)
-        {
-            if (payload.Count < 2) return false;
-            int length = payload.PopLeadingByte();
+			IList<byte> block = payload.PopLeadingBytes(length);
+			deviceHeader.ServiceRequest = new List<bool>();
+			foreach (byte b in block)
+			{
+				deviceHeader.ServiceRequest.Add(b.Bit7());
+				deviceHeader.ServiceRequest.Add(b.Bit6());
+				deviceHeader.ServiceRequest.Add(b.Bit5());
+				deviceHeader.ServiceRequest.Add(b.Bit4());
+				deviceHeader.ServiceRequest.Add(b.Bit3());
+				deviceHeader.ServiceRequest.Add(b.Bit2());
+				deviceHeader.ServiceRequest.Add(b.Bit1());
+				deviceHeader.ServiceRequest.Add(b.Bit0());
+				if (deviceHeader.ServiceRequest.Count >= 32) break;
+			}
+			return true;
+		}
+		static bool parseBuildNumber(IList<byte> payload, DLSProNetHeader deviceHeader)
+		{
+			if (payload.Count < 2) return false;
+			int length = payload.PopLeadingByte();
 
-            if (payload.Count < length) throw new Exception();
+			if (payload.Count < length) throw new Exception();
 
-            IList<byte> block = payload.PopLeadingBytes(length);
+			IList<byte> block = payload.PopLeadingBytes(length);
 
-            if (block.Count > 0)
-            {
-                deviceHeader.TestVersion = block.PopLeadingByte();
-            }
-            if (block.Count > 0)
-            {
-                deviceHeader.TestRevision = block.PopLeadingByte();
-            }
+			if (block.Count > 0)
+			{
+				deviceHeader.TestVersion = block.PopLeadingByte();
+			}
+			if (block.Count > 0)
+			{
+				deviceHeader.TestRevision = block.PopLeadingByte();
+			}
 
-            return true;
-        }
-        static bool parseKeyID(IList<byte> payload, DLSProNetHeader deviceHeader)
-        {
-            if (payload.Count < 2) return false;
-            int length = payload.PopLeadingByte();
+			return true;
+		}
+		static bool parseKeyID(IList<byte> payload, DLSProNetHeader deviceHeader)
+		{
+			if (payload.Count < 2) return false;
+			int length = payload.PopLeadingByte();
 
-            if (payload.Count < length) throw new Exception();
+			if (payload.Count < length) throw new Exception();
 
-            deviceHeader.KeyID = payload.PopLeadingBytes(length).ToArray();
+			deviceHeader.KeyID = payload.PopLeadingBytes(length).ToArray();
 
-            return true;
-        }
-        static bool parseAdditionalInfo(IList<byte> payload, DLSProNetHeader deviceHeader)
-        {
-            if (payload.Count < 2) return false;
-            int length = payload.PopLeadingByte();
+			return true;
+		}
+		static bool parseAdditionalInfo(IList<byte> payload, DLSProNetHeader deviceHeader)
+		{
+			if (payload.Count < 2) return false;
+			int length = payload.PopLeadingByte();
 
-            if (payload.Count < length) throw new Exception();
+			if (payload.Count < length) throw new Exception();
 
-            IList<byte> block = payload.PopLeadingBytes(length);
-            //Implementation
-            return true;
-        }
-        static bool parseCommunicatorVersion(IList<byte> payload, DLSProNetHeader deviceHeader)
-        {
-            if (payload.Count < 2) return false;
-            int length = payload.PopLeadingByte();
+			IList<byte> block = payload.PopLeadingBytes(length);
+			//Implementation
+			return true;
+		}
+		static bool parseCommunicatorVersion(IList<byte> payload, DLSProNetHeader deviceHeader)
+		{
+			if (payload.Count < 2) return false;
+			int length = payload.PopLeadingByte();
 
-            if (payload.Count < length) throw new Exception();
+			if (payload.Count < length) throw new Exception();
 
-            deviceHeader.CommunicatorVersion = payload.PopLeadingBytes(length).ToArray();
+			deviceHeader.CommunicatorVersion = payload.PopLeadingBytes(length).ToArray();
 
-            return true;
-        }
-    }
+			return true;
+		}
+	}
 }

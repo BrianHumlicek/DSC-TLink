@@ -15,7 +15,7 @@
 
 namespace DSC.TLink
 {
-    public class DeviceHeader
+	public class DeviceHeader
 	{
 		protected DeviceHeader() { }
 		public ushort DeviceType { get; protected set; }

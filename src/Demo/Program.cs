@@ -23,18 +23,18 @@ namespace DSC.TLink
 			using (TLinkClient client = new TLinkClient())
 			{
 				client.Connect(IPAddress.Parse("192.168.1.119"), 0xCAFE);
-                client.SendMessageBCD("00-09-50-01-FF-0C-0A-0F-0E-01-8C");
-                var one = client.ReadMessageBCD();
-                client.SendMessageBCD("00-09-E0-00-FF-C0-A8-01-77-03-C8");
-                var two = client.ReadMessageBCD();
-                client.SendMessageBCD("00-0E-00-07-FF-00-07-00-00-01-00-21-CB-34-02-3C");
-                var three = client.ReadMessageBCD();
-                client.SendMessageBCD("00-0E-00-07-FF-00-07-00-01-01-00-21-E3-53-02-74");
-                var four = client.ReadMessageBCD();
-                client.SendMessageBCD("00-0B-00-07-FF-05-21-00-00-1F-9B-01-F1");
-                var five = client.ReadMessageBCD();
-                Console.ReadKey();
-            }
-        }
-    }
+				client.SendMessageBCD("00-09-50-01-FF-0C-0A-0F-0E-01-8C");
+				var one = client.ReadMessageBCD();
+				client.SendMessageBCD("00-09-E0-00-FF-C0-A8-01-77-03-C8");
+				var two = client.ReadMessageBCD();
+				client.SendMessageBCD("00-0E-00-07-FF-00-07-00-00-01-00-21-CB-34-02-3C");
+				var three = client.ReadMessageBCD();
+				client.SendMessageBCD("00-0E-00-07-FF-00-07-00-01-01-00-21-E3-53-02-74");
+				var four = client.ReadMessageBCD();
+				client.SendMessageBCD("00-0B-00-07-FF-05-21-00-00-1F-9B-01-F1");
+				var five = client.ReadMessageBCD();
+				Console.ReadKey();
+			}
+		}
+	}
 }
