@@ -59,7 +59,7 @@ namespace DSC.TLink
 
 			if (useEncryption)
 			{
-				AES.Key = GSEncryptionKeyGenerator.FromDeviceHeader(deviceHeader);
+				AES.Key = TLinkAESKeyGenerator.FromDeviceHeader(deviceHeader);
 			}
 		}
 

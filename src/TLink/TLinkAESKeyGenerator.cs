@@ -16,8 +16,8 @@
 
 namespace DSC.TLink
 {
-	public class GSEncryptionKeyGenerator
-	{
+	public class TLinkAESKeyGenerator
+    {
 		private static byte[] lookupTable = new byte[128]
 		{
 			 16,	//0x10
