@@ -72,14 +72,14 @@ namespace DSC.TLink
 				packet = decrypt(packet);
 			}
 
-			(List<byte> header, List<byte> payload) = parsePacket(packet);
+			(List<byte> header, List<byte> payload) = parseConsoleHeader(packet);
 
 			return payload;
 		}
 
 		public void SendMessage(byte[] message)
 		{
-			var packet = encodePacket(sendHeader, message);
+			var packet = encodeConsoleHeader(sendHeader, message);
 
 			if (useEncryption)
 			{
@@ -128,11 +128,15 @@ namespace DSC.TLink
 			}
 		}
 
-		(List<byte>, List<byte>) parsePacket(IEnumerable<byte> packetBytes)
+		(List<byte>, List<byte>) parseConsoleHeader(IEnumerable<byte> packetBytes)
 		{
-			List<byte> header = new List<byte>();	//This is called ConsoleHeader on the connect packet and is always 5 bytes long in the connect packet
+			//Consoleheader
+			//[0] Datamode
+			//[1] Console password HB
+			//[2] Console password LB
+			List<byte> consoleHeader = new List<byte>();	//This is called ConsoleHeader on the connect packet and is always 5 bytes long in the connect packet
 			List<byte> payload = new List<byte>();
-			List<byte> workingList = header;
+			List<byte> workingList = consoleHeader;
 
 			using (var enumerator = packetBytes.GetEnumerator())
 			while (enumerator.MoveNext())
@@ -161,8 +165,8 @@ namespace DSC.TLink
 						workingList = payload;
 						break;
 					case 0x7F:   //End of frame
-						if (workingList == header) throw new TLinkPacketException("End of frame encountered before start of frame");
-						return (header, payload);
+						if (workingList == consoleHeader) throw new TLinkPacketException("End of frame encountered before start of frame");
+						return (consoleHeader, payload);
 					default:
 						workingList.Add(enumerator.Current);
 						break;
@@ -172,9 +176,9 @@ namespace DSC.TLink
 			throw new TLinkPacketException("No end of frame delimiter");
 		}
 
-		byte[] encodePacket(IEnumerable<byte> header, IEnumerable<byte> payload)
+		byte[] encodeConsoleHeader(IEnumerable<byte> consoleHeader, IEnumerable<byte> payload)
 		{
-			return stuffBytes(header).Concat(0x7E).Concat(stuffBytes(payload)).Concat(0x7F).ToArray();
+			return stuffBytes(consoleHeader).Concat(0x7E).Concat(stuffBytes(payload)).Concat(0x7F).ToArray();
 
 			IEnumerable<byte> stuffBytes(IEnumerable<byte> inputBytes)
 			{
