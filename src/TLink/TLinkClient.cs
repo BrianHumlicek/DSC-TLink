@@ -31,7 +31,8 @@ namespace DSC.TLink
         protected DeviceHeader? deviceHeader;
 		TcpClient tcpClient;
 		Aes AES;
-		byte[] sendHeader;
+		byte[] consoleHeader = { 1, 0xCA, 0xFE };	//Default console header
+		readonly byte dataMode = 1;	//This always seems to be 1.  I'm creating a field in case it is needed for something, but made it readonly until it needs to be changed.
 
 		public TLinkClient()
 		{
@@ -41,17 +42,22 @@ namespace DSC.TLink
 			AES = Aes.Create();
 			AES.Mode = CipherMode.ECB;
 			AES.Padding = PaddingMode.None;
-
-			sendHeader = new byte[] { 1, 202, 254 };	//TODO: Figure out what this is supposed to be
 		}
 
-		public void Connect(IPAddress address)
+		public void Connect(IPAddress address, ushort installerCode)
 		{
-			Connect(new IPEndPoint(address, 3062));
+            //port 3092 seems to have something too.  3064 is the "ReceiverPort"
+            Connect(new IPEndPoint(address, 3062), installerCode);
 		}
-		public void Connect(IPEndPoint endPoint)
+
+		/// <summary>
+		/// 
+		/// </summary>
+		/// <param name="endPoint"></param>
+		/// <param name="installerCode">[851][011] GS / IP Installer Code</param>
+		public void Connect(IPEndPoint endPoint, ushort installerCode)
 		{
-			tcpClient.Connect(endPoint);
+            tcpClient.Connect(endPoint);
 
 			var message = ReadMessage();
 
@@ -61,9 +67,11 @@ namespace DSC.TLink
 			{
 				AES.Key = TLinkAESKeyGenerator.FromDeviceHeader(deviceHeader);
 			}
-		}
 
-		public List<byte> ReadMessage()
+            consoleHeader = new byte[] { dataMode, installerCode.HighByte(), installerCode.LowByte() };
+        }
+
+        public List<byte> ReadMessage()
 		{
 			byte[] packet = readPacket();
 
@@ -79,7 +87,7 @@ namespace DSC.TLink
 
 		public void SendMessage(byte[] message)
 		{
-			var packet = encodeConsoleHeader(sendHeader, message);
+			var packet = encodeConsoleHeader(consoleHeader, message);
 
 			if (useEncryption)
 			{
@@ -131,8 +139,8 @@ namespace DSC.TLink
 		(List<byte>, List<byte>) parseConsoleHeader(IEnumerable<byte> packetBytes)
 		{
 			//Consoleheader
-			//[0] Datamode
-			//[1] Console password HB
+			//[0] Datamode	- This seems to always be 1
+			//[1] Console password HB	This is the installer code default 0xCAFE
 			//[2] Console password LB
 			List<byte> consoleHeader = new List<byte>();	//This is called ConsoleHeader on the connect packet and is always 5 bytes long in the connect packet
 			List<byte> payload = new List<byte>();

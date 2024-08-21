@@ -22,7 +22,7 @@ namespace DSC.TLink
 		{
 			using (TLinkClient client = new TLinkClient())
 			{
-				client.Connect(IPAddress.Parse("192.168.1.119"));	//port 3092 seems to have something too.  3064 is the "ReceiverPort"
+				client.Connect(IPAddress.Parse("192.168.1.119"), 0xCAFE);
                 client.SendMessageBCD("00-09-50-01-FF-0C-0A-0F-0E-01-8C");
                 var one = client.ReadMessageBCD();
                 client.SendMessageBCD("00-09-E0-00-FF-C0-A8-01-77-03-C8");
