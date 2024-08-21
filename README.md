@@ -23,3 +23,7 @@ The TL280RE was purchased and installed by myself for the sole purpose of experi
 I have seen that it is possible to communicate with the alarm panel over the local network through the TL280 and see the status of the various zones as well as programming and configuration using the DLS5 software tool.  I believe that control of the arming and disarming is also possible, but I havent actually seen that yet. Seeing this was enough confirmation to make the investment of figuring out how to do this myself.
 
 The communication begins by opening a TCP connection with the TL280 on port 3062.  The TL280 will immedietly send a packet of 56 bytes that eventually can be parsed into information about the alarm panel such as device ID, software revision, and several other fields that may or may not be interesting.  From this point on, all communications are encrypted using an AES ECB block cipher.  The key for the cipher is a mashup of data that is sent in the initial data packet from the TL280.  So far, the project can connect and parse this data.  I have verified that I can generate the correct key and successfuly decode the AES cipher.
+
+## Update (Aug-2024)
+I have expanded the functionality the the TLink Client as well as made progress in figuring out more pieces of the communication.  At this time, it appears that what I am working with is DLS specific and I may need to pivot to the ITV2 interface.
+I also have added a [References](References.md) section that has some useful manufacturer documentation.

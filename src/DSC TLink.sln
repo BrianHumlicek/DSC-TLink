@@ -9,9 +9,19 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 	ProjectSection(SolutionItems) = preProject
 		LICENSE HEADER.txt = LICENSE HEADER.txt
 		..\README.md = ..\README.md
+		References.md = References.md
 	EndProjectSection
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Demo", "Demo\Demo.csproj", "{1775557F-C808-441A-8D07-E4DEB5368A85}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "References", "References", "{ECD90723-5DC0-4C44-BE1B-216B21E38127}"
+	ProjectSection(SolutionItems) = preProject
+		..\references\D-308291_01_powermanage_4.8_ins_en.pdf = ..\references\D-308291_01_powermanage_4.8_ins_en.pdf
+		..\references\DSC Neo and Pro Series.pdf = ..\references\DSC Neo and Pro Series.pdf
+		..\references\NEO_GO_App-Setup_v8_English.pptx = ..\references\NEO_GO_App-Setup_v8_English.pptx
+		..\references\PowerSeries Pro Reference Manual.pdf = ..\references\PowerSeries Pro Reference Manual.pdf
+		..\references\TL280_Install_guide_INT_R001_en.pdf = ..\references\TL280_Install_guide_INT_R001_en.pdf
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
