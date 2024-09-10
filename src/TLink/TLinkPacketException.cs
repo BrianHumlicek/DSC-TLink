@@ -15,7 +15,7 @@
 
 namespace DSC.TLink
 {
-	internal class TLinkPacketException : Exception
+	public class TLinkPacketException : Exception
 	{
 		public TLinkPacketException(string message) : base(message)
 		{

@@ -66,5 +66,10 @@ namespace DSC.TLink.Extensions
 			int padLength = 16 - (byteEnumerable.Count() % 16);
 			return padLength < 16 ? byteEnumerable.Concat(Enumerable.Repeat((byte)0, padLength)) : byteEnumerable;
 		}
+        public static int AddAndReturnIndex<T>(this IList<T> list, T item)
+        {
+            list.Add(item);
+            return list.Count -1;
+        }
 	}
 }

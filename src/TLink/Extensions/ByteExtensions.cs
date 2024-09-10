@@ -27,5 +27,12 @@ namespace DSC.TLink.Extensions
 		public static bool Bit7(this byte @byte) => (@byte & 0x80) != 0;
 		public static byte HighByte(this ushort word) => (byte)(word >> 8);
 		public static byte LowByte(this ushort word) => (byte)(word & 0xFF);
+        public static byte HighByte(this Enum enumeration) => Convert.ToUInt16(enumeration).HighByte();
+        public static byte LowByte(this Enum enumeration) => Convert.ToUInt16(enumeration).LowByte();
+        public static IEnumerable<byte> ToBigEndianEnumerable(this ushort word)
+        {
+            yield return word.HighByte();
+            yield return word.LowByte();
+        }
 	}
 }

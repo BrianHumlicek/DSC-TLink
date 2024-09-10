@@ -1,6 +1,6 @@
 ﻿namespace DSC.TLink.Extensions
 {
-	public static class EnumerableByteExtensions
+	internal static class EnumerableByteExtensions
 	{
 		public static IEnumerable<byte> Concat(this IEnumerable<byte> byteEnumerable, byte appendByte)
 		{
