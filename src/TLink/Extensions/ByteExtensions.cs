@@ -1,17 +1,18 @@
-﻿//  Copyright (C) 2024 Brian Humlicek
-
-//  This program is free software: you can redistribute it and/or modify
-//  it under the terms of the GNU General Public License as published by
-//  the Free Software Foundation, either version 3 of the License, or
-//  (at your option) any later version.
-
-//  This program is distributed in the hope that it will be useful,
-//  but WITHOUT ANY WARRANTY; without even the implied warranty of
-//  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-//  GNU General Public License for more details.
-
-//  You should have received a copy of the GNU General Public License
-//	along with this program.  If not, see <https://www.gnu.org/licenses/>.
+﻿// DSC TLink - a communications library for DSC Powerseries NEO alarm panels
+// Copyright (C) 2024 Brian Humlicek
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY, without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 namespace DSC.TLink.Extensions
 {
@@ -27,12 +28,12 @@ namespace DSC.TLink.Extensions
 		public static bool Bit7(this byte @byte) => (@byte & 0x80) != 0;
 		public static byte HighByte(this ushort word) => (byte)(word >> 8);
 		public static byte LowByte(this ushort word) => (byte)(word & 0xFF);
-        public static byte HighByte(this Enum enumeration) => Convert.ToUInt16(enumeration).HighByte();
-        public static byte LowByte(this Enum enumeration) => Convert.ToUInt16(enumeration).LowByte();
-        public static IEnumerable<byte> ToBigEndianEnumerable(this ushort word)
-        {
-            yield return word.HighByte();
-            yield return word.LowByte();
-        }
+		public static byte HighByte(this Enum enumeration) => Convert.ToUInt16(enumeration).HighByte();
+		public static byte LowByte(this Enum enumeration) => Convert.ToUInt16(enumeration).LowByte();
+		public static IEnumerable<byte> ToBigEndianEnumerable(this ushort word)
+		{
+			yield return word.HighByte();
+			yield return word.LowByte();
+		}
 	}
 }
