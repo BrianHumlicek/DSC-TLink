@@ -14,21 +14,14 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-
 namespace DSC.TLink.Messages
 {
-	internal class EndDelimitedArray : BinaryMessage.DiscreteFieldMetadata<byte[]>
+	internal abstract partial class BinaryMessage
 	{
-		protected override int Length => throw new NotImplementedException();
-
-		protected override byte[] MessageBytes2Property(byte[] messageBytes)
+		interface IBitmapFieldMetadata : IFieldMetadata
 		{
-			throw new NotImplementedException();
-		}
-
-		protected override IEnumerable<byte> Property2FieldBytes(byte[] property)
-		{
-			throw new NotImplementedException();
+			IEnumerable<string> GetPropertyNames();
+			IGetSetProperty<T> GetPropertyAccessor<T>(string propertyName);
 		}
 	}
 }

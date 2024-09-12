@@ -24,15 +24,15 @@ namespace DSC.TLink.ITv2.Messages
 		protected override void OnInitializing()
 		{
 			base.OnInitializing();
-			DefineField(new U8(), nameof(DeviceType));
-			DefineField(new FixedArray(length: 2), nameof(DeviceID));
-			DefineField(new FixedArray(length: 2), nameof(FirmwareVersion));
-			DefineField(new FixedArray(length: 2), nameof(ProtocolVersion));
-			DefineField(new U16(), nameof(TxBufferSize));
-			DefineField(new U16(), nameof(RxBufferSize));
-			DefineField(new FixedArray(length: 2), nameof(Unknown));
-			DefineField(new U8(), nameof(EncryptionType));
-			DefineField(new U16(), nameof(CRC));
+			DefineField(new U8(),					nameof(DeviceType));
+			DefineField(new FixedArray(length: 2),	nameof(DeviceID));
+			DefineField(new FixedArray(length: 2),	nameof(FirmwareVersion));
+			DefineField(new FixedArray(length: 2),	nameof(ProtocolVersion));
+			DefineField(new U16(),					nameof(TxBufferSize));
+			DefineField(new U16(),					nameof(RxBufferSize));
+			DefineField(new FixedArray(length: 2),	nameof(Unknown));
+			DefineField(new U8(),					nameof(EncryptionType));
+			DefineField(new U16(),					nameof(CRC));
 		}
 		public byte DeviceType
 		{

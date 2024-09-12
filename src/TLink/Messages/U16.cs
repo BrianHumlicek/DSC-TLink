@@ -18,10 +18,10 @@ using DSC.TLink.Extensions;
 
 namespace DSC.TLink.Messages
 {
-	internal class U16 : BinaryMessage.FieldMetadata<ushort>
+	internal class U16 : BinaryMessage.DiscreteFieldMetadata<ushort>
 	{
-		public override int Length => 2;
-		protected override IEnumerable<byte> GetFieldBytes() => initializationBuffer.ToBigEndianEnumerable();
-		protected override ushort GetPropertyValue(byte[] messageBytes) => (ushort)(messageBytes[Offset] << 8 | messageBytes[Offset + 1]);
+		protected override int Length => 2;
+		protected override IEnumerable<byte> Property2FieldBytes(ushort property) => property.ToBigEndianEnumerable();
+		protected override ushort MessageBytes2Property(byte[] messageBytes) => (ushort)(messageBytes[Offset] << 8 | messageBytes[Offset + 1]);
 	}
 }

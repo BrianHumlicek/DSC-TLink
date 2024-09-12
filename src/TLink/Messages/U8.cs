@@ -16,13 +16,13 @@
 
 namespace DSC.TLink.Messages
 {
-	internal class U8 : BinaryMessage.FieldMetadata<byte>
+	internal class U8 : BinaryMessage.DiscreteFieldMetadata<byte>
 	{
-		public override int Length => 1;
-		protected override byte GetPropertyValue(byte[] bytes) => bytes[Offset];
-		protected override IEnumerable<byte> GetFieldBytes()
+		protected override int Length => 1;
+		protected override byte MessageBytes2Property(byte[] messageBytes) => messageBytes[Offset];
+		protected override IEnumerable<byte> Property2FieldBytes(byte property)
 		{
-			yield return initializationBuffer;
+			yield return property;
 		}
 	}
 }

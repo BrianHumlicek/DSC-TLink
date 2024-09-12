@@ -16,28 +16,24 @@
 
 namespace DSC.TLink.Messages
 {
-	internal class LeadingLengthArray : BinaryMessage.FieldMetadata<byte[]>
+	internal class LeadingLengthArray : BinaryMessage.DiscreteFieldMetadata<byte[]>
 	{
-		byte? length;
-		public override int Length => length ?? throw new Exception($"Length is not initialized!");
-		protected override IEnumerable<byte> GetFieldBytes()
+		int length;
+		protected override int Length => length;
+		protected override IEnumerable<byte> Property2FieldBytes(byte[] propertyBytes)
 		{
-			length = (byte)(initializationBuffer?.Length ?? throw new Exception($"{nameof(LeadingLengthArray)} was not initialized!"));
-			foreach (var @byte in initializationBuffer)
+			length = propertyBytes.Length;
+
+			yield return (byte)length;
+
+			foreach (var @byte in propertyBytes)
 			{
 				yield return @byte;
 			}
 		}
-		protected override byte[] GetPropertyValue(byte[] bytes)
+		protected override byte[] MessageBytes2Property(byte[] messageBytes)
 		{
 			throw new NotImplementedException();
-		}
-		protected override void EnsureLengthSet(byte[] messageBytes)
-		{
-			if (length == default)
-			{
-				length = messageBytes[Offset];
-			}
 		}
 	}
 }

@@ -21,9 +21,9 @@ namespace DSC.TLink.Messages
 		interface IFieldMetadata
 		{
 			IEnumerable<byte> GetFieldBytes();
-			void EnsureLengthSet(byte[] messageBytes);
+			void SetOffsetAndInitialize(int  offset, byte[] messageBytes);
 			int Length { get; }
-			int? Offset { get; set; }
+			int Offset { get; }
 		}
 	}
 }

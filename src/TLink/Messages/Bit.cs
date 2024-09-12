@@ -14,21 +14,33 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-
 namespace DSC.TLink.Messages
 {
-	internal class EndDelimitedArray : BinaryMessage.DiscreteFieldMetadata<byte[]>
+	internal class Bit : BinaryMessage.BitmapMember<bool>
 	{
-		protected override int Length => throw new NotImplementedException();
-
-		protected override byte[] MessageBytes2Property(byte[] messageBytes)
+		int bitNumber;
+		int byteOffset;
+		int bitOffset;
+		public Bit(int bitNumber)
 		{
-			throw new NotImplementedException();
+			this.bitNumber = bitNumber;
+			byteOffset = bitNumber / 8;
+			bitOffset = bitNumber % 8;
 		}
 
-		protected override IEnumerable<byte> Property2FieldBytes(byte[] property)
+		protected override bool GetPropertyFromBytes(byte[] fieldBytes) => ((fieldBytes[byteOffset] >> bitOffset) & 0x01) == 0x01;
+		protected override void SetPropertyInBytes(bool setBit, byte[] fieldBytes)
 		{
-			throw new NotImplementedException();
+			byte workingByte = fieldBytes[byteOffset];
+			if (setBit)
+			{
+				workingByte = (byte)(workingByte & (1 << bitOffset));
+			}
+			else
+			{
+				workingByte = (byte)(workingByte | ~(1 << bitOffset));
+			}
+			fieldBytes[byteOffset] = workingByte;
 		}
 	}
 }

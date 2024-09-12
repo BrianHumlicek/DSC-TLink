@@ -24,77 +24,70 @@ namespace DSC.TLink.Messages
 		protected BinaryMessage(byte[]? messageBytes)
 		{
 			OnInitializing();
+			if (fieldDefinitions.Count == 0) throw new Exception();
 			if (messageBytes != default)
 			{
-				this.messagebytes = messageBytes;
-				calculateAndValidateLength();
+				MessageBytes = messageBytes;
 			}
 		}
 		protected abstract void OnInitializing();
-		List<IFieldMetadata> definitions = new List<IFieldMetadata>();
+		List<IFieldMetadata> fieldDefinitions = new List<IFieldMetadata>();
 		Dictionary<string, int> propertyMappings = new Dictionary<string, int>();
-		byte[]? messagebytes;
+		byte[]? messageBuffer;
 		public byte[] MessageBytes
 		{
 			get
 			{
-				if (messagebytes == null)
+				if (messageBuffer == null)
 				{
-					messagebytes = definitions.SelectMany(definition => definition.GetFieldBytes()).ToArray();
-					calculateAndValidateLength();
+					MessageBytes = fieldDefinitions.SelectMany(definition => definition.GetFieldBytes()).ToArray();
 				}
-				return messagebytes;
+				return messageBuffer!;
+			}
+			private set
+			{
+				messageBuffer = value;
+				initialize();
 			}
 		}
-		void calculateAndValidateLength()
+		void initialize()
 		{
-			//This runs through the sequence of definitions and incrementally sets the Length and Offset properties.
-			IFieldMetadata lastFieldDefinition = definitions.Aggregate((priorField, nextField) =>
+			fieldDefinitions[0].SetOffsetAndInitialize(offset: 0, MessageBytes);
+			IFieldMetadata lastFieldDefinition = fieldDefinitions.Aggregate((priorField, nextField) =>
 			{
-				if (priorField.Offset == default) priorField.Offset = 0;
-				priorField.EnsureLengthSet(MessageBytes);
-				nextField.Offset = priorField.Offset + priorField.Length;
-				nextField.EnsureLengthSet(MessageBytes);
+				int nextFieldOffset = priorField.Offset + priorField.Length;
+				nextField.SetOffsetAndInitialize(nextFieldOffset, MessageBytes);
 				return nextField;
 			});
 
-			int totalDefinedMessageLength = (int)lastFieldDefinition.Offset! + lastFieldDefinition.Length;
+			int totalDefinedMessageLength = lastFieldDefinition.Offset + lastFieldDefinition.Length;
 			if (MessageBytes.Length < totalDefinedMessageLength) throw new Exception($"{nameof(MessageBytes)} is not long enough to parse message!");
 			if (MessageBytes.Length > totalDefinedMessageLength)
 			{
 				//Do we care if messagebytes is longer than necesary?
 			}
 		}
-		public int Length => MessageBytes.Length;
-		protected void DefineField<T>(FieldMetadata<T> fieldMetadata, string propertyName) => propertyMappings[propertyName] = definitions.AddAndReturnIndex(fieldMetadata);
-		protected void DefineField<T>(MultiPropertyFieldMetadata<T> multiPropertyFieldMetadata)
+		protected void DefineField<T>(DiscreteFieldMetadata<T> discreteFieldMetadata, string propertyName) => propertyMappings[propertyName] = fieldDefinitions.AddAndReturnIndex(discreteFieldMetadata);
+		protected void DefineField(Bitmap compoundFieldMetadata)
 		{
-			int definitionIndex = definitions.AddAndReturnIndex(multiPropertyFieldMetadata);
-			foreach (var property in ((IMultiPropertyFieldMetadata<T>)multiPropertyFieldMetadata).GetProperties())
+			int definitionIndex = fieldDefinitions.AddAndReturnIndex(compoundFieldMetadata);
+			foreach (var propertyName in ((IBitmapFieldMetadata)compoundFieldMetadata).GetPropertyNames())
 			{
-				propertyMappings.Add(property, definitionIndex);
+				propertyMappings.Add(propertyName, definitionIndex);
 			}
 		}
-		IFieldMetadata getFieldMetadata(string propertyName) => definitions[propertyMappings[propertyName]];
-		protected T GetProperty<T>([CallerMemberName] string propertyName = "") => getFieldMetadata(propertyName) switch
+		IGetSetProperty<T> getPropertyAccessor<T>(string propertyName) => fieldDefinitions[propertyMappings[propertyName]] switch
 		{
-			IFieldMetadata<T> fieldMetadata => fieldMetadata.GetPropertyValue(MessageBytes),
-			IMultiPropertyFieldMetadata<T> multiPropertyFieldMetadata => multiPropertyFieldMetadata.GetPropertyValue(MessageBytes, propertyName),
+			IGetSetProperty<T> propertyAccessor => propertyAccessor ,
+			IBitmapFieldMetadata bitmappedFieldMetadata => bitmappedFieldMetadata.GetPropertyAccessor<T>(propertyName),
 			_ => throw new Exception("Unknown property metadata")
 		};
+		protected T GetProperty<T>([CallerMemberName] string propertyName = "") => getPropertyAccessor<T>(propertyName).Property;
 		protected void SetProperty<T>(T value, [CallerMemberName] string propertyName = "")
 		{
-			if (messagebytes != null) throw new ArgumentException($"Unable to set property {propertyName} because {nameof(BinaryMessage)}.{nameof(MessageBytes)} has been initialized.");
-			var metadata = getFieldMetadata(propertyName);
-			if (metadata is IFieldMetadata<T> fieldMetadata)
-			{
-				fieldMetadata.SetPropertyValue(value);
-			}
-			else if (metadata is IMultiPropertyFieldMetadata<T> multiPropertyFieldMetadata)
-			{
-				multiPropertyFieldMetadata.SetPropertyValue(value, propertyName);
-			}
-			throw new Exception("Unknown metadata type in SetProperty");
+			if (messageBuffer != null) throw new ArgumentException($"Unable to set property {propertyName} because {nameof(BinaryMessage)}.{nameof(MessageBytes)} has been initialized.");
+
+			getPropertyAccessor<T>(propertyName).Property = value ?? throw new ArgumentException("Cannot set Binary message properties to null!");
 		}
 	}
 }

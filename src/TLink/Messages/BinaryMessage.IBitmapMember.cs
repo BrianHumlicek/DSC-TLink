@@ -18,10 +18,10 @@ namespace DSC.TLink.Messages
 {
 	internal abstract partial class BinaryMessage
 	{
-		interface IFieldMetadata<T> : IFieldMetadata
+		interface IBitmapMember
 		{
-			T GetPropertyValue(byte[] messageBytes);
-			void SetPropertyValue(T value);
+			void Initialize(byte[] fieldBytes);
+			void SetFieldBytes(byte[] fieldBytes);
 		}
 	}
 }

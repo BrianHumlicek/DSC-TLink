@@ -18,11 +18,9 @@ namespace DSC.TLink.Messages
 {
 	internal abstract partial class BinaryMessage
 	{
-		interface IMultiPropertyFieldMetadata<T> : IFieldMetadata
+		interface IGetSetProperty<T>
 		{
-			IEnumerable<string> GetProperties();
-			T GetPropertyValue(byte[] messageBytes, string propertyName);
-			void SetPropertyValue(T value, string propertyName);
+			T Property { get; set; }
 		}
 	}
 }
