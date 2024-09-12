@@ -34,7 +34,7 @@ namespace DSC.TLink.ITv2
 		{
 			List<byte> result = new List<byte>(message);
 			int encodedCRC = result.PopTrailingWord();
-			if (encodedCRC != calculateCRC(result)) throw new Exception("Framing CRC error");
+			//if (encodedCRC != calculateCRC(result)) throw new Exception("Framing CRC error");
 			int encodedLength = result.PopLeadingByte();
 			if (encodedLength != result.Count + 2) throw new Exception("Framing length mismatch");
 			return result.ToArray();

@@ -35,7 +35,6 @@ namespace DSC.TLink.ITv2
 			var messagearray = TLinkClient.HexString2Array("15-00-00-06-0A-96-02-03-29-05-41-02-23-02-00-02-00-00-01-01-28-86");
 
 			var message = new OpenSessionMessage(messagearray);
-
 		}
 
 		public void Dispose()

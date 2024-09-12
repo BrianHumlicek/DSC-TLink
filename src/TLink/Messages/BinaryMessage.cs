@@ -51,8 +51,9 @@ namespace DSC.TLink.Messages
 		void initializeIncoming(byte[] messageBytes)
 		{
 			messageBuffer = messageBytes;
-			byte[] unframedMessage = framingActive ? messageBytes
-												   : messageFraming!.RemoveFraming(messageBytes);
+			byte[] unframedMessage = framingActive ? messageFraming!.RemoveFraming(messageBytes)
+												   : messageBytes;
+
 			initializeFieldMetadata(unframedMessage);
 		}
 		public void initializeOutgoing()
@@ -74,6 +75,10 @@ namespace DSC.TLink.Messages
 
 			definedLength = lastFieldDefinition.Offset + lastFieldDefinition.Length;
 			if (unframedMessage.Length < definedLength) throw new Exception($"{nameof(MessageBytes)} is not long enough to parse message!");
+			
+			//Unframed messages could potentially run longer than the defined length.
+			//One reason is if you are building messages compositionally, then the extra
+			//bytes could be additional data for another compositional message
 			if (framingActive && unframedMessage.Length > definedLength) throw new Exception("Message is longer than expected");
 		}
 		public int DefinedLength

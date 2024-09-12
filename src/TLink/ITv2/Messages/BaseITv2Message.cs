@@ -24,7 +24,6 @@ namespace DSC.TLink.ITv2.Messages
 		protected override void OnInitializing()
 		{
 			SetFraming(new LeadLengthTrailCRCFraming());
-
 			DefineField(new U16(), nameof(Type));
 			DefineField(new U16(), nameof(Command));
 			DefineField(new U8(), nameof(Sequence));

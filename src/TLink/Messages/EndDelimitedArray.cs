@@ -19,7 +19,10 @@ namespace DSC.TLink.Messages
 {
 	internal class EndDelimitedArray : BinaryMessage.DiscreteFieldMetadata<byte[]>
 	{
-		protected override int Length => throw new NotImplementedException();
+		protected override int GetFieldLength(byte[] property)
+		{
+			throw new NotImplementedException();
+		}
 
 		protected override byte[] MessageBytes2Property(byte[] messageBytes)
 		{

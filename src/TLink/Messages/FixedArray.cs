@@ -24,7 +24,6 @@ namespace DSC.TLink.Messages
 			this.length = length;
 		}
 		protected override byte[] DefaultPropertyInitializer() => new byte[length];
-		protected override int Length => length;
 		protected override IEnumerable<byte> Property2FieldBytes(byte[] property)
 		{
 			for (int i = 0; i < length; i++)
@@ -34,9 +33,11 @@ namespace DSC.TLink.Messages
 		}
 		protected override byte[] MessageBytes2Property(byte[] messageBytes)
 		{
-			byte[] result = new byte[Length];
-			Array.Copy(messageBytes, Offset, result, 0, Length);
+			byte[] result = new byte[length];
+			Array.Copy(messageBytes, Offset, result, 0, length);
 			return result;
 		}
+
+		protected override int GetFieldLength(byte[] property) => length;
 	}
 }
