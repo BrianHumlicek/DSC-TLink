@@ -21,57 +21,79 @@ namespace DSC.TLink.Messages
 {
 	internal abstract partial class BinaryMessage
 	{
+		int? definedLength;
+		List<IFieldMetadata> fieldDefinitions = new List<IFieldMetadata>();
+		Dictionary<string, int> propertyMappings = new Dictionary<string, int>();
+		byte[]? messageBuffer;
+		IProcessFraming? messageFraming;
+		bool framingActive => messageFraming != null;
 		protected BinaryMessage(byte[]? messageBytes)
 		{
 			OnInitializing();
 			if (fieldDefinitions.Count == 0) throw new Exception();
 			if (messageBytes != default)
 			{
-				MessageBytes = messageBytes;
+				initializeIncoming(messageBytes);
 			}
 		}
 		protected abstract void OnInitializing();
-		List<IFieldMetadata> fieldDefinitions = new List<IFieldMetadata>();
-		Dictionary<string, int> propertyMappings = new Dictionary<string, int>();
-		byte[]? messageBuffer;
 		public byte[] MessageBytes
 		{
 			get
 			{
 				if (messageBuffer == null)
 				{
-					MessageBytes = fieldDefinitions.SelectMany(definition => definition.GetFieldBytes()).ToArray();
+					initializeOutgoing();
 				}
 				return messageBuffer!;
 			}
-			private set
-			{
-				messageBuffer = value;
-				initialize();
-			}
 		}
-		void initialize()
+		void initializeIncoming(byte[] messageBytes)
 		{
-			fieldDefinitions[0].SetOffsetAndInitialize(offset: 0, MessageBytes);
+			messageBuffer = messageBytes;
+			byte[] unframedMessage = framingActive ? messageBytes
+												   : messageFraming!.RemoveFraming(messageBytes);
+			initializeFieldMetadata(unframedMessage);
+		}
+		public void initializeOutgoing()
+		{
+			byte[] unframedMessage = fieldDefinitions.SelectMany(definition => definition.GetFieldBytes()).ToArray();
+			initializeFieldMetadata(unframedMessage);
+			messageBuffer = framingActive ? messageFraming!.AddFraming(unframedMessage)
+										  : unframedMessage;
+		}
+		void initializeFieldMetadata(byte[] unframedMessage)
+		{
+			fieldDefinitions[0].SetOffsetAndInitialize(offset: 0, unframedMessage);
 			IFieldMetadata lastFieldDefinition = fieldDefinitions.Aggregate((priorField, nextField) =>
 			{
 				int nextFieldOffset = priorField.Offset + priorField.Length;
-				nextField.SetOffsetAndInitialize(nextFieldOffset, MessageBytes);
+				nextField.SetOffsetAndInitialize(nextFieldOffset, unframedMessage);
 				return nextField;
 			});
 
-			int totalDefinedMessageLength = lastFieldDefinition.Offset + lastFieldDefinition.Length;
-			if (MessageBytes.Length < totalDefinedMessageLength) throw new Exception($"{nameof(MessageBytes)} is not long enough to parse message!");
-			if (MessageBytes.Length > totalDefinedMessageLength)
+			definedLength = lastFieldDefinition.Offset + lastFieldDefinition.Length;
+			if (unframedMessage.Length < definedLength) throw new Exception($"{nameof(MessageBytes)} is not long enough to parse message!");
+			if (framingActive && unframedMessage.Length > definedLength) throw new Exception("Message is longer than expected");
+		}
+		public int DefinedLength
+		{
+			get
 			{
-				//Do we care if messagebytes is longer than necesary?
+				if (definedLength == null)
+				{
+					initializeOutgoing();
+				}
+				return (int)(framingActive ? messageBuffer!.Length
+										   : definedLength!);
 			}
 		}
+		protected void SetFraming(IProcessFraming framing) => messageFraming = framing;
 		protected void DefineField<T>(DiscreteFieldMetadata<T> discreteFieldMetadata, string propertyName) => propertyMappings[propertyName] = fieldDefinitions.AddAndReturnIndex(discreteFieldMetadata);
-		protected void DefineField(Bitmap compoundFieldMetadata)
+		protected void DefineField(Bitmap bitmapMetadata)
 		{
-			int definitionIndex = fieldDefinitions.AddAndReturnIndex(compoundFieldMetadata);
-			foreach (var propertyName in ((IBitmapFieldMetadata)compoundFieldMetadata).GetPropertyNames())
+			int definitionIndex = fieldDefinitions.AddAndReturnIndex(bitmapMetadata);
+			foreach (var propertyName in ((IBitmapFieldMetadata)bitmapMetadata).GetPropertyNames())
 			{
 				propertyMappings.Add(propertyName, definitionIndex);
 			}

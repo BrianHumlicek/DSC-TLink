@@ -20,7 +20,7 @@ namespace DSC.TLink.Messages
 {
 	internal class U16 : BinaryMessage.DiscreteFieldMetadata<ushort>
 	{
-		protected override int Length => 2;
+		protected override int GetFieldLength(ushort property) => 2;
 		protected override IEnumerable<byte> Property2FieldBytes(ushort property) => property.ToBigEndianEnumerable();
 		protected override ushort MessageBytes2Property(byte[] messageBytes) => (ushort)(messageBytes[Offset] << 8 | messageBytes[Offset + 1]);
 	}

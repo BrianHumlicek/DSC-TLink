@@ -14,30 +14,22 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-namespace DSC.TLink.Messages
+using DSC.TLink.Messages;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+
+namespace DSC.TLink.ITv2
 {
-	internal class BoolBit : BinaryMessage.MultiPropertyFieldMetadata<bool>
+	internal class CRCMessage : BinaryMessage
 	{
-		int bitNumber;
-		public BoolBit(int size, params KeyValuePair<string, int>[] bits)
-		{
-			this.bitNumber = bitNumber;
-		}
-		public override int Length => throw new NotImplementedException();
-
-		protected override IEnumerable<byte> GetFieldBytes()
+		public CRCMessage(byte[]? messageBytes = null) : base(messageBytes) { }
+		protected override void OnInitializing()
 		{
 			throw new NotImplementedException();
 		}
 
-		protected override IEnumerable<string> GetProperties()
-		{
-			throw new NotImplementedException();
-		}
-
-		protected override bool GetPropertyValue(byte[] messageBytes, string propertyName)
-		{
-			throw new NotImplementedException();
-		}
 	}
 }

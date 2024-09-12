@@ -22,11 +22,12 @@ namespace DSC.TLink.Messages
 		{
 			T? propertyBuffer;
 			int? offset;
+			int? length;
 			protected int Offset => offset ?? throw new Exception();
 			protected virtual T? DefaultPropertyInitializer() => default(T);
 			protected abstract T MessageBytes2Property(byte[] messageBytes);
 			protected abstract IEnumerable<byte> Property2FieldBytes(T property);
-			protected abstract int Length { get; }
+			protected abstract int GetFieldLength(T property);
 			T GetPropertyBuffer() => (propertyBuffer ?? DefaultPropertyInitializer()) ?? throw new Exception();
 
 			//Explicit implementations of IGetSetProperty<T>
@@ -45,9 +46,10 @@ namespace DSC.TLink.Messages
 				{
 					propertyBuffer = MessageBytes2Property(messageBytes);
 				}
+				length = GetFieldLength(propertyBuffer);
 			}
 			int IFieldMetadata.Offset => Offset;
-			int IFieldMetadata.Length => Length;
+			int IFieldMetadata.Length => length ?? throw new Exception();
 		}
 	}
 }

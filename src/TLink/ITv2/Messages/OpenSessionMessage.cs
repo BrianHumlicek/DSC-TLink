@@ -32,7 +32,6 @@ namespace DSC.TLink.ITv2.Messages
 			DefineField(new U16(),					nameof(RxBufferSize));
 			DefineField(new FixedArray(length: 2),	nameof(Unknown));
 			DefineField(new U8(),					nameof(EncryptionType));
-			DefineField(new U16(),					nameof(CRC));
 		}
 		public byte DeviceType
 		{
@@ -73,11 +72,6 @@ namespace DSC.TLink.ITv2.Messages
 		{
 			get => (EncryptionType)GetProperty<byte>();
 			init => SetProperty(value);
-		}
-		public ushort CRC
-		{
-			get => GetProperty<ushort>();
-			set => SetProperty(value);
 		}
 	}
 }

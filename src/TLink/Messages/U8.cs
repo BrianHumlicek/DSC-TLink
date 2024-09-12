@@ -18,7 +18,7 @@ namespace DSC.TLink.Messages
 {
 	internal class U8 : BinaryMessage.DiscreteFieldMetadata<byte>
 	{
-		protected override int Length => 1;
+		protected override int GetFieldLength(byte property) => 1;
 		protected override byte MessageBytes2Property(byte[] messageBytes) => messageBytes[Offset];
 		protected override IEnumerable<byte> Property2FieldBytes(byte property)
 		{

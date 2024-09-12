@@ -14,35 +14,14 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-using DSC.TLink.Messages;
-
-namespace DSC.TLink.ITv2.Messages
+namespace DSC.TLink.Messages
 {
-	internal abstract class BaseITv2Message : BinaryMessage
+	internal abstract partial class BinaryMessage
 	{
-		protected BaseITv2Message(byte[]? messageBytes) : base(messageBytes) { }
-		protected override void OnInitializing()
+		public interface IProcessFraming
 		{
-			SetFraming(new LeadLengthTrailCRCFraming());
-
-			DefineField(new U16(), nameof(Type));
-			DefineField(new U16(), nameof(Command));
-			DefineField(new U8(), nameof(Sequence));
-		}
-		public ushort @Type
-		{
-			get => GetProperty<ushort>();
-			set => SetProperty(value);
-		}
-		public ITv2Command Command
-		{
-			get => (ITv2Command)GetProperty<ushort>();
-			set => SetProperty(value);
-		}
-		public byte Sequence
-		{
-			get => GetProperty<byte>();
-			set => SetProperty(value);
+			byte[] AddFraming(byte[] message);
+			byte[] RemoveFraming(byte[] message);
 		}
 	}
 }
