@@ -26,7 +26,7 @@ namespace DSC.TLink.ITv2
 	internal class CRCMessage : BinaryMessage
 	{
 		public CRCMessage(byte[]? messageBytes = null) : base(messageBytes) { }
-		protected override void OnInitializing()
+		protected override void DefineFields()
 		{
 			throw new NotImplementedException();
 		}

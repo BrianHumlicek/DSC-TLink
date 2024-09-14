@@ -55,7 +55,7 @@ namespace DSC.TLink.Messages
 				_ => throw new Exception()
 			};
 			IEnumerable<string> IBitmapFieldMetadata.GetPropertyNames() => propertyMappings.Keys;
-			void IFieldMetadata.SetOffsetAndInitialize(int offset, byte[] messageBytes)
+			void IFieldMetadata.InitializeFieldProperty(int offset, byte[] messageBytes)
 			{
 				this.offset = offset;
 				byte[] fieldBytes = messageBytes.Skip(offset).Take(length).ToArray();

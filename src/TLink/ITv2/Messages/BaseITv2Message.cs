@@ -21,24 +21,30 @@ namespace DSC.TLink.ITv2.Messages
 	internal abstract class BaseITv2Message : BinaryMessage
 	{
 		protected BaseITv2Message(byte[]? messageBytes) : base(messageBytes) { }
-		protected override void OnInitializing()
+		protected override void DefineFields()
 		{
 			SetFraming(new LeadLengthTrailCRCFraming());
-			DefineField(new U16(), nameof(Type));
+			DefineField(new U8(), nameof(HostSequence));
+			DefineField(new U8(), nameof(RemoteSequence));
 			DefineField(new U16(), nameof(Command));
-			DefineField(new U8(), nameof(Sequence));
+			DefineField(new U8(), nameof(AppSequence));
 		}
-		public ushort @Type
+		public byte HostSequence
 		{
-			get => GetProperty<ushort>();
+			get => GetProperty<byte>();
+			set => SetProperty(value);
+		}
+		public byte RemoteSequence
+		{
+			get => GetProperty<byte>();
 			set => SetProperty(value);
 		}
 		public ITv2Command Command
 		{
 			get => (ITv2Command)GetProperty<ushort>();
-			set => SetProperty(value);
+			set => SetProperty((ushort)value);
 		}
-		public byte Sequence
+		public byte AppSequence
 		{
 			get => GetProperty<byte>();
 			set => SetProperty(value);

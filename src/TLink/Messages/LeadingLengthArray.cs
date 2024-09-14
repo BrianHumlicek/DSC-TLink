@@ -18,7 +18,7 @@ namespace DSC.TLink.Messages
 {
 	internal class LeadingLengthArray : BinaryMessage.DiscreteFieldMetadata<byte[]>
 	{
-		protected override int GetFieldLength(byte[] property) => property.Length + 1;
+		protected override int GetValidFieldLength(byte[] property) => property.Length + 1;
 		protected override IEnumerable<byte> Property2FieldBytes(byte[] propertyBytes)
 		{
 			int length = propertyBytes.Length;

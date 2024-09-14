@@ -16,15 +16,15 @@
 
 namespace DSC.TLink.Messages
 {
-	internal class NestedMessage<T> : BinaryMessage.DiscreteFieldMetadata<T> where T : BinaryMessage
+	internal class NestedMessage<T> : BinaryMessage.DiscreteFieldMetadata<T> where T : BinaryMessage, new()
 	{
-		Func<byte[], T> messageConstructor;
-		public NestedMessage(Func<byte[], T> messageConstructor)
+		protected override int GetValidFieldLength(T nestedMessage) => nestedMessage.DefinedLength;
+		protected override T MessageBytes2Property(int offset, byte[] messageBytes)
 		{
-			this.messageConstructor = messageConstructor;
-		}
-		protected override int GetFieldLength(T nestedMessage) => nestedMessage.DefinedLength;
-		protected override T MessageBytes2Property(byte[] messageBytes) => messageConstructor(messageBytes);
+			T message = new T();
+			message.MessageBytes = messageBytes;
+			return message;
+		} 
 		protected override IEnumerable<byte> Property2FieldBytes(T nestedMessage) => nestedMessage.MessageBytes;
 	}
 }

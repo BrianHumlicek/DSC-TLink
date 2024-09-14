@@ -14,22 +14,25 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-namespace DSC.TLink.Messages
+using DSC.TLink.Messages;
+
+namespace DSC.TLink.ITv2.Messages
 {
-	internal class FixedArray : BinaryMessage.DiscreteFieldMetadata<byte[]>
+	internal class CommandResponse : BaseITv2Message
 	{
-		readonly int length;
-		public FixedArray(int length)
+		public CommandResponse(byte[]? messageBytes = null) : base(messageBytes)
 		{
-			this.length = length;
+			Command = ITv2Command.Command_Response;
 		}
-		protected override byte[] DefaultPropertyInitializer() => new byte[length];
-		protected override IEnumerable<byte> Property2FieldBytes(byte[] property) => property;
-		protected override byte[] MessageBytes2Property(int offset, byte[] messageBytes) => messageBytes.Skip(offset).Take(length).ToArray();
-		protected override int GetValidFieldLength(byte[] property)
+		protected override void DefineFields()
 		{
-			if (property.Length != length) throw new Exception("Invalid length for property!");
-			return property.Length;
+			base.DefineFields();
+			DefineField(new U8(), nameof(pad));
+		}
+		byte pad
+		{
+			get => GetProperty<byte>();
+			set => SetProperty(value);
 		}
 	}
 }

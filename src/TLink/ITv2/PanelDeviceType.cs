@@ -14,22 +14,14 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-namespace DSC.TLink.Messages
+namespace DSC.TLink.ITv2
 {
-	internal class FixedArray : BinaryMessage.DiscreteFieldMetadata<byte[]>
+	public enum Itv2PanelDeviceType : byte
 	{
-		readonly int length;
-		public FixedArray(int length)
-		{
-			this.length = length;
-		}
-		protected override byte[] DefaultPropertyInitializer() => new byte[length];
-		protected override IEnumerable<byte> Property2FieldBytes(byte[] property) => property;
-		protected override byte[] MessageBytes2Property(int offset, byte[] messageBytes) => messageBytes.Skip(offset).Take(length).ToArray();
-		protected override int GetValidFieldLength(byte[] property)
-		{
-			if (property.Length != length) throw new Exception("Invalid length for property!");
-			return property.Length;
-		}
+		Unknown = 0xFF,
+		DscInterfaceCommunicatorModule = 0x02,
+		Icontrol = 0x80,
+		KeyPad = 0x81,
+		GenericThirdpartyDevice = 0x8F,
 	}
 }

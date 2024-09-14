@@ -21,28 +21,26 @@ namespace DSC.TLink.Messages
 		public abstract class DiscreteFieldMetadata<T> : IGetSetProperty<T>, IFieldMetadata
 		{
 			T? propertyBuffer;
-			bool isPropertyInitialized;
 			int? offset;
 			int? length;
-			protected int Offset => offset ?? throw new Exception();
-			protected virtual T? DefaultPropertyInitializer() => default(T);
-			protected abstract T MessageBytes2Property(byte[] messageBytes);
+			protected virtual T? DefaultPropertyInitializer() => default;
+			protected abstract T MessageBytes2Property(int offset, byte[] messageBytes);
 			protected abstract IEnumerable<byte> Property2FieldBytes(T property);
-			protected abstract int GetFieldLength(T property);	//This can be used to validate set length as well as returning actual or spec'ed length.
+			protected abstract int GetValidFieldLength(T property);
 			T propertyAccessor
 			{
 				get
 				{
-					if (!isPropertyInitialized)
+					if (propertyBuffer == null)
 					{
-						propertyBuffer = DefaultPropertyInitializer();
+						propertyAccessor = DefaultPropertyInitializer() ?? throw new Exception("");
 					}
-					return propertyBuffer ?? throw new Exception("");
+					return propertyBuffer!;
 				}
 				set
 				{
-					propertyBuffer = value ?? throw new Exception("");
-					isPropertyInitialized = true;
+					propertyBuffer = value ?? throw new Exception();
+					length = GetValidFieldLength(propertyBuffer);
 				}
 			}
 
@@ -55,16 +53,16 @@ namespace DSC.TLink.Messages
 
 			//Explicit implementations of IFieldMetadata
 			IEnumerable<byte> IFieldMetadata.GetFieldBytes() => Property2FieldBytes(propertyAccessor);
-			void IFieldMetadata.SetOffsetAndInitialize(int offset, byte[] messageBytes)
+			void IFieldMetadata.InitializeFieldProperty(int offset, byte[] messageBytes)
 			{
 				this.offset = offset;
-				if (!isPropertyInitialized)
-				{
-					propertyAccessor = MessageBytes2Property(messageBytes);
-				}
-				length = GetFieldLength(propertyAccessor);
+				propertyAccessor = MessageBytes2Property(offset, messageBytes);
 			}
-			int IFieldMetadata.Offset => Offset;
+			int IFieldMetadata.Offset
+			{
+				get => offset ?? throw new Exception();
+				set => offset = value;
+			}
 			int IFieldMetadata.Length => length ?? throw new Exception();
 		}
 	}

@@ -21,9 +21,9 @@ namespace DSC.TLink.ITv2.Messages
 	internal class OpenSessionMessage : BaseITv2Message
 	{
 		public OpenSessionMessage(byte[]? messageBytes = default) : base(messageBytes) { }
-		protected override void OnInitializing()
+		protected override void DefineFields()
 		{
-			base.OnInitializing();
+			base.DefineFields();
 			DefineField(new U8(),					nameof(DeviceType));
 			DefineField(new FixedArray(length: 2),	nameof(DeviceID));
 			DefineField(new FixedArray(length: 2),	nameof(FirmwareVersion));
@@ -33,10 +33,10 @@ namespace DSC.TLink.ITv2.Messages
 			DefineField(new FixedArray(length: 2),	nameof(Unknown));
 			DefineField(new U8(),					nameof(EncryptionType));
 		}
-		public byte DeviceType
+		public Itv2PanelDeviceType DeviceType
 		{
-			get => GetProperty<byte>();
-			init => SetProperty(value);
+			get => (Itv2PanelDeviceType)GetProperty<byte>();
+			init => SetProperty((byte)value);
 		}
 		public byte[] DeviceID
 		{

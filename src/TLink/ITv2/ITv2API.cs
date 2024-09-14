@@ -16,6 +16,7 @@
 
 using DSC.TLink.ITv2.Messages;
 using Microsoft.Extensions.Logging;
+using System.Text;
 
 namespace DSC.TLink.ITv2
 {
@@ -30,11 +31,37 @@ namespace DSC.TLink.ITv2
 		}
 		public void Open(int port = 3072)
 		{
-			//(List<byte> header, List<byte> messageBytes) = tlinkClient.Listen(port);
-			//File.WriteAllText("OpenSessionMessage.txt", TLinkClient.Array2HexString(messageBytes));
-			var messagearray = TLinkClient.HexString2Array("15-00-00-06-0A-96-02-03-29-05-41-02-23-02-00-02-00-00-01-01-28-86");
+			string integrationId = "200328900112";
+			byte[] id = Encoding.UTF8.GetBytes(integrationId);
 
-			var message = new OpenSessionMessage(messagearray);
+			(List<byte> header, List<byte> messageBytes) = tlinkClient.Listen(port);
+			string s = Encoding.UTF8.GetString(header.ToArray());
+
+			//File.WriteAllText("OpenSessionMessage.txt", TLinkClient.Array2HexString(messageBytes));
+			//var messagearray = TLinkClient.HexString2A brray("15-00-00-06-0A-96-02-03-29-05-41-02-23-02-00-02-00-00-01-01-28-86");
+
+			var message = new OpenSessionMessage(messageBytes.ToArray());
+
+			var response1 = new CommandResponse()
+			{
+				Type = 0x0100,
+				Sequence = message.Sequence
+			};
+
+			tlinkClient.SendMessage(id, response1.MessageBytes);
+
+			(var header2, var messageBytes2) = tlinkClient.ReadMessage();
+
+			var response2 = new OpenSessionMessage()
+			{
+				Type = 0x2010,
+				Command = ITv2Command.Connection_Open_Session,
+				Sequence = 1,
+				DeviceType = message.DeviceType,
+				DeviceID = message.DeviceID,
+
+			};
+			(var header3, var messageBytes3) = tlinkClient.ReadMessage();
 		}
 
 		public void Dispose()

@@ -15,6 +15,8 @@
 
 using DSC.TLink.DLSProNet;
 using DSC.TLink.ITv2;
+using System.Runtime.Intrinsics.Arm;
+using System.Text;
 
 namespace DSC.TLink
 {
