@@ -14,14 +14,12 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-using DSC.TLink.Extensions;
-
 namespace DSC.TLink.Messages
 {
 	internal class U16 : BinaryMessage.DiscreteFieldMetadata<ushort>
 	{
 		protected override int GetValidFieldLength(ushort property) => 2;
-		protected override IEnumerable<byte> Property2FieldBytes(ushort property) => property.ToBigEndianEnumerable();
-		protected override ushort MessageBytes2Property(int offset, byte[] messageBytes) => (ushort)(messageBytes[offset] << 8 | messageBytes[offset + 1]);
+		protected override IEnumerable<byte> Property2FieldBytes(ushort property) => BitConverter.GetBytes(property);
+		protected override ushort MessageBytes2Property(int offset, byte[] messageBytes) => BitConverter.ToUInt16(messageBytes, offset);
 	}
 }

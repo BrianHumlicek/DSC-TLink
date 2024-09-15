@@ -24,9 +24,9 @@ namespace DSC.TLink.ITv2.Messages
 		{
 			Command = ITv2Command.Command_Response;
 		}
-		protected override void DefineFields()
+		protected override void OnInitializing()
 		{
-			base.DefineFields();
+			base.OnInitializing();
 			DefineField(new U8(), nameof(pad));
 		}
 		byte pad

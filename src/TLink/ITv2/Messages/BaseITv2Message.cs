@@ -21,7 +21,7 @@ namespace DSC.TLink.ITv2.Messages
 	internal abstract class BaseITv2Message : BinaryMessage
 	{
 		protected BaseITv2Message(byte[]? messageBytes) : base(messageBytes) { }
-		protected override void DefineFields()
+		protected override void OnInitializing()
 		{
 			SetFraming(new LeadLengthTrailCRCFraming());
 			DefineField(new U8(), nameof(HostSequence));

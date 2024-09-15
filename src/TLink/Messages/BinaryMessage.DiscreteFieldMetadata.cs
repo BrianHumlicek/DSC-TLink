@@ -33,13 +33,13 @@ namespace DSC.TLink.Messages
 				{
 					if (propertyBuffer == null)
 					{
-						propertyAccessor = DefaultPropertyInitializer() ?? throw new Exception("");
+						propertyAccessor = DefaultPropertyInitializer() ?? throw new InvalidOperationException("Property has not been properly initialized and is null!");
 					}
 					return propertyBuffer!;
 				}
 				set
 				{
-					propertyBuffer = value ?? throw new Exception();
+					propertyBuffer = value ?? throw new ArgumentNullException();
 					length = GetValidFieldLength(propertyBuffer);
 				}
 			}
@@ -60,10 +60,10 @@ namespace DSC.TLink.Messages
 			}
 			int IFieldMetadata.Offset
 			{
-				get => offset ?? throw new Exception();
+				get => offset ?? throw new ArgumentNullException(nameof(offset));
 				set => offset = value;
 			}
-			int IFieldMetadata.Length => length ?? throw new Exception();
+			int IFieldMetadata.Length => length ?? throw new InvalidOperationException($"Property '{nameof(length)}' has not been set in type '{GetType().Name}'");
 		}
 	}
 }

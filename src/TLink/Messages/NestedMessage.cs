@@ -18,7 +18,7 @@ namespace DSC.TLink.Messages
 {
 	internal class NestedMessage<T> : BinaryMessage.DiscreteFieldMetadata<T> where T : BinaryMessage, new()
 	{
-		protected override int GetValidFieldLength(T nestedMessage) => nestedMessage.DefinedLength;
+		protected override int GetValidFieldLength(T nestedMessage) => nestedMessage.MessageBytes.Length;
 		protected override T MessageBytes2Property(int offset, byte[] messageBytes)
 		{
 			T message = new T();

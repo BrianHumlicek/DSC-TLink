@@ -16,20 +16,9 @@
 
 namespace DSC.TLink.Messages
 {
-	internal class FixedArray : BinaryMessage.DiscreteFieldMetadata<byte[]>
+	internal class BinaryMessageException : Exception
 	{
-		readonly int length;
-		public FixedArray(int length)
-		{
-			this.length = length;
-		}
-		protected override byte[] DefaultPropertyInitializer() => new byte[length];
-		protected override IEnumerable<byte> Property2FieldBytes(byte[] property) => property;
-		protected override byte[] MessageBytes2Property(int offset, byte[] messageBytes) => messageBytes.Skip(offset).Take(length).ToArray();
-		protected override int GetValidFieldLength(byte[] property)
-		{
-			if (property.Length != length) throw new ArgumentException($"FixedArray is defined to be length {length} but was set with an array of length {property.Length}");
-			return property.Length;
-		}
+		public BinaryMessageException() { }
+		public BinaryMessageException(string errormessage) : base(errormessage) { }
 	}
 }

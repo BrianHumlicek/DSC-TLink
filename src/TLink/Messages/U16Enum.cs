@@ -14,22 +14,20 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+using System.Runtime.InteropServices;
+
 namespace DSC.TLink.Messages
 {
-	internal class FixedArray : BinaryMessage.DiscreteFieldMetadata<byte[]>
+	internal class U16Enum<T> : BinaryMessage.DiscreteFieldMetadata<T> where T : struct, Enum
 	{
-		readonly int length;
-		public FixedArray(int length)
+		public U16Enum()
 		{
-			this.length = length;
+			int length = Marshal.SizeOf(typeof(T));
+			if (length != 2) throw new InvalidOperationException($"Unable to create {nameof(U8Enum<T>)} because the underlying type of generic enum argument {typeof(T).Name} is of length {length}");
 		}
-		protected override byte[] DefaultPropertyInitializer() => new byte[length];
-		protected override IEnumerable<byte> Property2FieldBytes(byte[] property) => property;
-		protected override byte[] MessageBytes2Property(int offset, byte[] messageBytes) => messageBytes.Skip(offset).Take(length).ToArray();
-		protected override int GetValidFieldLength(byte[] property)
-		{
-			if (property.Length != length) throw new ArgumentException($"FixedArray is defined to be length {length} but was set with an array of length {property.Length}");
-			return property.Length;
-		}
+		protected override int GetValidFieldLength(T property) => 2;
+		//If anyone knows a better way than boxing/unboxing, let me know...
+		protected override T MessageBytes2Property(int offset, byte[] messageBytes) => (T)(object)BitConverter.ToUInt16(messageBytes, offset);
+		protected override IEnumerable<byte> Property2FieldBytes(T property) => BitConverter.GetBytes((ushort)(object)property);
 	}
 }

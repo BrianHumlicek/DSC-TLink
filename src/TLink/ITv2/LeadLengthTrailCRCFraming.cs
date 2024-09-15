@@ -21,6 +21,7 @@ namespace DSC.TLink.ITv2
 {
 	internal class LeadLengthTrailCRCFraming : BinaryMessage.IProcessFraming
 	{
+		public int OverheadLength => 3;
 		public byte[] AddFraming(byte[] message)
 		{
 			List<byte> result = new List<byte>(message);
@@ -33,9 +34,10 @@ namespace DSC.TLink.ITv2
 		{
 			List<byte> result = new List<byte>(message);
 			int encodedCRC = result.PopTrailingWord();
-			if (encodedCRC != crc16(result)) throw new Exception("Framing CRC error");
+			int calculatedCRC = crc16(result);
+			if (encodedCRC != calculatedCRC) throw new BinaryMessageException($"Framing CRC error!  Expected 0x{encodedCRC:X4} but calculated 0x{calculatedCRC:X4}");
 			int encodedLength = result.PopLeadingByte();
-			if (encodedLength != result.Count + 2) throw new Exception("Framing length mismatch");
+			if (encodedLength != result.Count + 2) throw new BinaryMessageException($"Framing length mismatch!  Expected {encodedLength} bytes and got {result.Count + 2} bytes");
 			return result.ToArray();
 		}
 		int crc16(IEnumerable<byte> message)

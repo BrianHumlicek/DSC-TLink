@@ -24,51 +24,57 @@ namespace DSC.TLink.Messages
 		int definedMessageLength;
 		List<IFieldMetadata> fieldDefinitions = new List<IFieldMetadata>();
 		Dictionary<string, int> propertyMappings = new Dictionary<string, int>();
-		byte[]? messageBytesBuffer;
-		IProcessFraming? messageFraming;
-		bool framingActive => messageFraming != null;
+		byte[]? messageBytesBackingField;
+		IProcessFraming? framingBackingField;
+		IProcessFraming framing
+		{
+			get => framingBackingField ??= new DefaultFraming();
+			set => framingBackingField = value ?? throw new ArgumentNullException(nameof(framing));
+		}
+		bool framingActive => framing is not DefaultFraming;
 		public BinaryMessage()
 		{
-			DefineFields();
-			if (fieldDefinitions.Count == 0) throw new Exception();
+			OnInitializing();
+			if (fieldDefinitions.Count == 0) throw new InvalidOperationException($"No fields have been defined!  Use {nameof(DefineField)}() in {nameof(OnInitializing)}() to configure at least one field for message type '{GetType().Name}'");
 		}
 		protected BinaryMessage(byte[] messageBytes) : this()
 		{
-			MessageBytes = messageBytes;
+			MessageBytes = messageBytes ?? throw new ArgumentNullException(nameof(messageBytes));
 		}
-		protected abstract void DefineFields();
-		public int DefinedLength
-		{
-			get
-			{   //Ensure the MessageBytes get'er is triggered in both cases (framingActive true/false) to ensure definedMessageLength is initialized.
-				byte[] localMessageBytes = MessageBytes;
-				return (int)(framingActive ? localMessageBytes.Length
-										   : definedMessageLength);
-			}
-		}
+		protected abstract void OnInitializing();
 		public byte[] MessageBytes
 		{
 			get
 			{
-				if (messageBytesBuffer == null)
+				if (messageBytesBackingField == null)
 				{
 					byte[] unframedMessage = fieldDefinitions.SelectMany(definition => definition.GetFieldBytes()).ToArray();
 					initializeFieldMetadata(unframedMessage, initializeFieldProperties: false);
-					messageBytesBuffer = framingActive ? messageFraming!.AddFraming(unframedMessage)
-													   : unframedMessage;
+					messageBytesBackingField = framing.AddFraming(unframedMessage);
 				}
-				return messageBytesBuffer!;
+				return messageBytesBackingField!;
 			}
 			set
 			{
-				messageBytesBuffer = value ?? throw new ArgumentNullException(nameof(MessageBytes));
-				byte[] unframedMessage = framingActive ? messageFraming!.RemoveFraming(messageBytesBuffer)
-													   : messageBytesBuffer;
+				if (value == null) throw new ArgumentNullException(nameof(MessageBytes));
+				byte[] unframedMessage = framing.RemoveFraming(value);
+				int unframedMessageDefinedLength = initializeFieldMetadata(unframedMessage, initializeFieldProperties: true);
 
-				initializeFieldMetadata(unframedMessage, initializeFieldProperties: true);
+				//Unframed messages could potentially run longer than the defined length.
+				//For example, an unframed nested message in the middle of another message
+				//would be initialized with too many bytes because we don't know how many
+				//bytes the nested message needs until after it is initialized.
+				//Framed messages on the other hand are complete and should be exactly as
+				//defined.  Any overrun in a framed message is a problem.
+				if (framingActive && unframedMessage.Length != unframedMessageDefinedLength) throw new BinaryMessageException($"Framing error!  Expected {unframedMessageDefinedLength} bytes but got {unframedMessage.Length} bytes");
+
+				int totalDefinedMessageLength = unframedMessageDefinedLength + framing.OverheadLength;
+
+				messageBytesBackingField = value.Length == totalDefinedMessageLength ? value
+																					 : value.Take(totalDefinedMessageLength).ToArray();
 			}
 		}
-		void initializeFieldMetadata(byte[] unframedMessage, bool initializeFieldProperties)
+		int initializeFieldMetadata(byte[] unframedMessage, bool initializeFieldProperties)
 		{
 			initializeField(fieldDefinitions[0], 0);
 
@@ -79,19 +85,12 @@ namespace DSC.TLink.Messages
 				return nextField;
 			});
 
-			definedMessageLength = lastFieldDefinition.Offset + lastFieldDefinition.Length;
+			return lastFieldDefinition.Offset + lastFieldDefinition.Length;
 			
-			//Unframed messages could potentially run longer than the defined length.
-			//For example, an unframed nested message in the middle of another message
-			//would be initialized with too many bytes because we don't know how many
-			//bytes the nested message needs until after it is initialized.
-			//Framed messages on the other hand are complete and should be exactly as
-			//defined.  Any overrun in a framed message is a problem.
-			if (framingActive && unframedMessage.Length > definedMessageLength) throw new Exception("Too many bytes to parse message!");
-
 			void initializeField(IFieldMetadata fieldMetadata, int offset)
 			{
-				if (offset >= unframedMessage.Length) throw new Exception($"Too few bytes to parse message!");
+				if (offset >= unframedMessage.Length) throw new BinaryMessageException($"No available bytes for initializing field {fieldDefinitions.IndexOf(fieldMetadata)}  with type '{fieldMetadata.GetType().Name}' of message type '{GetType().Name}'!");
+
 				if (initializeFieldProperties)
 				{
 					fieldMetadata.InitializeFieldProperty(offset, unframedMessage);
@@ -104,7 +103,7 @@ namespace DSC.TLink.Messages
 		}
 
 		//Field definitions
-		protected void SetFraming(IProcessFraming framing) => messageFraming = framing;
+		protected void SetFraming(IProcessFraming framing) => this.framing = framing;
 		protected void DefineField<T>(DiscreteFieldMetadata<T> discreteFieldMetadata, string propertyName) => propertyMappings[propertyName] = fieldDefinitions.AddAndReturnIndex(discreteFieldMetadata);
 		protected void DefineField(Bitmap bitmapMetadata)
 		{
@@ -119,14 +118,14 @@ namespace DSC.TLink.Messages
 		protected T GetProperty<T>([CallerMemberName] string propertyName = "") => getPropertyAccessor<T>(propertyName).Property;
 		protected void SetProperty<T>(T value, [CallerMemberName] string propertyName = "")
 		{
-			getPropertyAccessor<T>(propertyName).Property = value ?? throw new ArgumentException("Cannot set Binary message properties to null!");
-			messageBytesBuffer = null;	//This will cause a full re-evaluation of field properties and re-populate the messageBytesBuffer on the net 'Get' of MessageBytes
+			getPropertyAccessor<T>(propertyName).Property = value ?? throw new ArgumentNullException(propertyName);
+			messageBytesBackingField = null;	//This will cause a full re-evaluation of field properties and re-populate the messageBytesBuffer on the net 'Get' of MessageBytes
 		}
 		IGetSetProperty<T> getPropertyAccessor<T>(string propertyName) => fieldDefinitions[propertyMappings[propertyName]] switch
 		{
 			IGetSetProperty<T> propertyAccessor => propertyAccessor,
 			IBitmapFieldMetadata bitmappedFieldMetadata => bitmappedFieldMetadata.GetPropertyAccessor<T>(propertyName),
-			_ => throw new Exception("Unknown property metadata.  Did you forget to cast an enum to it's value type on SetProperty?")
+			object metadata => throw new InvalidOperationException($"Error accessing property '{propertyName}'.  Metadata describes type '{metadata.GetType().GenericTypeArguments[0].Name}' and property accessor is type '{typeof(T).Name}'.  Did you forget to explicitly cast an enum to it's value type on Get/SetProperty() or use the generic Enum<T> metadata type?")
 		};
 	}
 }

@@ -21,13 +21,13 @@ namespace DSC.TLink.Messages
 		public abstract class BitmapMember<T> : IGetSetProperty<T>, IBitmapMember
 		{
 			T? propertyBuffer;
-			T GetPropertyBuffer() => (propertyBuffer ?? DefaultPropertyInitializer()) ?? throw new Exception();
-			protected virtual T? DefaultPropertyInitializer() => default(T);
+			T GetPropertyBuffer() => (propertyBuffer ?? DefaultPropertysetializer()) ?? throw new Exception();
+			protected virtual T? DefaultPropertysetializer() => default(T);
 			protected abstract T GetPropertyFromBytes(byte[] fieldBytes);
 			protected abstract void SetPropertyInBytes(T property, byte[] fieldBytes);
 
 			//Explicit implementations of IBitmappedFieldMember
-			void IBitmapMember.Initialize(byte[] fieldBytes)
+			void IBitmapMember.setialize(byte[] fieldBytes)
 			{
 				if (propertyBuffer == null)
 				{

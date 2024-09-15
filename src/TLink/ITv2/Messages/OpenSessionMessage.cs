@@ -21,47 +21,47 @@ namespace DSC.TLink.ITv2.Messages
 	internal class OpenSessionMessage : BaseITv2Message
 	{
 		public OpenSessionMessage(byte[]? messageBytes = default) : base(messageBytes) { }
-		protected override void DefineFields()
+		protected override void OnInitializing()
 		{
-			base.DefineFields();
-			DefineField(new U8(),					nameof(DeviceType));
-			DefineField(new FixedArray(length: 2),	nameof(DeviceID));
-			DefineField(new FixedArray(length: 2),	nameof(FirmwareVersion));
-			DefineField(new FixedArray(length: 2),	nameof(ProtocolVersion));
-			DefineField(new U16(),					nameof(TxBufferSize));
-			DefineField(new U16(),					nameof(RxBufferSize));
-			DefineField(new FixedArray(length: 2),	nameof(Unknown));
-			DefineField(new U8(),					nameof(EncryptionType));
+			base.OnInitializing();
+			DefineField(new U8Enum<Itv2PanelDeviceType>(),	nameof(DeviceType));
+			DefineField(new FixedArray(length: 2),			nameof(DeviceID));
+			DefineField(new FixedArray(length: 2),			nameof(FirmwareVersion));
+			DefineField(new FixedArray(length: 2),			nameof(ProtocolVersion));
+			DefineField(new U16(),							nameof(TxBufferSize));
+			DefineField(new U16(),							nameof(RxBufferSize));
+			DefineField(new FixedArray(length: 2),			nameof(Unknown));
+			DefineField(new U8Enum<EncryptionType>(),		nameof(EncryptionType));
 		}
 		public Itv2PanelDeviceType DeviceType
 		{
-			get => (Itv2PanelDeviceType)GetProperty<byte>();
-			init => SetProperty((byte)value);
+			get => GetProperty<Itv2PanelDeviceType>();
+			set => SetProperty(value);
 		}
 		public byte[] DeviceID
 		{
 			get => GetProperty<byte[]>();
-			init => SetProperty(value);
+			set => SetProperty(value);
 		}
 		public byte[] FirmwareVersion
 		{
 			get => GetProperty<byte[]>();
-			init => SetProperty(value);
+			set => SetProperty(value);
 		}
 		public byte[] ProtocolVersion
 		{
 			get => GetProperty<byte[]>();
-			init => SetProperty(value);
+			set => SetProperty(value);
 		}
 		public ushort TxBufferSize
 		{
 			get => GetProperty<ushort>();
-			init => SetProperty(value);
+			set => SetProperty(value);
 		}
 		public ushort RxBufferSize
 		{
 			get => GetProperty<ushort>();
-			init => SetProperty(value);
+			set => SetProperty(value);
 		}
 		public byte[] Unknown   //No clue what this is but setting it to 0x00, 0x01 seems to be the thing to do when sending a message.
 		{
@@ -70,8 +70,8 @@ namespace DSC.TLink.ITv2.Messages
 		}
 		public EncryptionType EncryptionType
 		{
-			get => (EncryptionType)GetProperty<byte>();
-			init => SetProperty(value);
+			get => GetProperty<EncryptionType>();
+			set => SetProperty(value);
 		}
 	}
 }

@@ -55,13 +55,13 @@ namespace DSC.TLink.Messages
 				_ => throw new Exception()
 			};
 			IEnumerable<string> IBitmapFieldMetadata.GetPropertyNames() => propertyMappings.Keys;
-			void IFieldMetadata.InitializeFieldProperty(int offset, byte[] messageBytes)
+			void IFieldMetadata.setializeFieldProperty(int offset, byte[] messageBytes)
 			{
 				this.offset = offset;
 				byte[] fieldBytes = messageBytes.Skip(offset).Take(length).ToArray();
 				foreach (var member in propertyMappings.Values)
 				{
-					member.Initialize(fieldBytes);
+					member.setialize(fieldBytes);
 				}
 			}
 		}

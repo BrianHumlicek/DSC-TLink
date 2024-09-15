@@ -20,6 +20,7 @@ namespace DSC.TLink.Messages
 	{
 		public interface IProcessFraming
 		{
+			int OverheadLength { get; }
 			byte[] AddFraming(byte[] message);
 			byte[] RemoveFraming(byte[] message);
 		}
