@@ -16,39 +16,46 @@
 
 using DSC.TLink.Extensions;
 using DSC.TLink.Messages;
+using DSC.TLink.Messages.Extensions;
 
-namespace DSC.TLink.ITv2
+namespace DSC.TLink.ITv2.Messages
 {
-	internal class LeadLengthTrailCRCFraming : BinaryMessage.IProcessFraming
+	internal class ITv2MessageFraming : IAddRemoveFraming
 	{
-		public int OverheadLength => 3;
-		public byte[] AddFraming(byte[] message)
+		public void AddFraming(List<byte> bytes)
 		{
-			List<byte> result = new List<byte>(message);
-			byte length = (byte)(message.Length + 2);   //Length includes the CRC bytes that will be added later
-			result.Insert(0, length);
-			ushort crc = (ushort)crc16(result);
-			return result.Concat(crc.ToBigEndianEnumerable()).ToArray();
+			ushort length = (ushort)(bytes.Count + 2);   //Length includes the CRC bytes that will be added below
+			bytes.Insert(0, length.LowByte());
+			if (length > 0x7F)
+			{
+				bytes.Insert(0, (byte)(length.HighByte() | 0x80));
+			}
+			ushort crc = (ushort)crc16(bytes);
+			bytes.Add(crc.HighByte());
+			bytes.Add(crc.LowByte());
 		}
-		public byte[] RemoveFraming(byte[] message)
+
+		public void RemoveFraming(ref ReadOnlySpan<byte> bytes)
 		{
-			List<byte> result = new List<byte>(message);
-			int encodedCRC = result.PopTrailingWord();
-			int calculatedCRC = crc16(result);
-			if (encodedCRC != calculatedCRC) throw new BinaryMessageException($"Framing CRC error!  Expected 0x{encodedCRC:X4} but calculated 0x{calculatedCRC:X4}");
-			int encodedLength = result.PopLeadingByte();
-			if (encodedLength != result.Count + 2) throw new BinaryMessageException($"Framing length mismatch!  Expected {encodedLength} bytes and got {result.Count + 2} bytes");
-			return result.ToArray();
+			int encodedCRC = bytes.PopTrailingWord();
+			int calculatedCRC = crc16(bytes.ToByteEnumerable());
+			if (encodedCRC != calculatedCRC) throw new MessageException($"Framing CRC error!  Expected 0x{encodedCRC:X4} but calculated 0x{calculatedCRC:X4}");
+			byte lengthByte1 = bytes.PopByte();
+			ushort encodedLength = lengthByte1.Bit7() ? BigEndianExtensions.U16((byte)(lengthByte1 & 0x7F), bytes.PopByte())
+													  : lengthByte1;
+			if (encodedLength != bytes.Length + 2) throw new MessageException($"Framing length mismatch!  Expected {encodedLength} bytes and got {bytes.Length + 2} bytes");
 		}
-		int crc16(IEnumerable<byte> message)
+
+		int crc16(IEnumerable<byte> crcRange)
 		{
 			ushort crc = ushort.MaxValue;
-			foreach (byte b in message)
+			foreach (byte b in crcRange)
 			{
-				crc = (ushort)((crc << 8) ^ lookupTable[(crc >> 8) ^ b & 0xFF]);
+				crc = (ushort)(crc << 8 ^ lookupTable[crc >> 8 ^ b & 0xFF]);
 			}
 			return crc;
 		}
+
 		static readonly ushort[] lookupTable = new ushort[]
 		{
 			0x0000, 0x1021, 0x2042, 0x3063, 0x4084, 0x50A5, 0x60C6, 0x70E7, 0x8108, 0x9129, 0xA14A, 0xB16B, 0xC18C, 0xD1AD, 0xE1CE, 0xF1EF,

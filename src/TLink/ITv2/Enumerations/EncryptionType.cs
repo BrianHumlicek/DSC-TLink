@@ -14,11 +14,12 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-namespace DSC.TLink.Messages
+namespace DSC.TLink.ITv2.Enumerations
 {
-	internal class BinaryMessageException : Exception
+	internal enum EncryptionType : byte
 	{
-		public BinaryMessageException() { }
-		public BinaryMessageException(string errormessage) : base(errormessage) { }
+		Unknown,
+		Type1 = 1,
+		Type2 = 2
 	}
 }

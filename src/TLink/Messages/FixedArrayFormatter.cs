@@ -16,12 +16,7 @@
 
 namespace DSC.TLink.Messages
 {
-	internal abstract partial class BinaryMessage
+	public class FixedArrayFormatter : IFormattedArray
 	{
-		interface IBitmapMember
-		{
-			void Initialize(byte[] fieldBytes);
-			void SetFieldBytes(byte[] fieldBytes);
-		}
 	}
 }

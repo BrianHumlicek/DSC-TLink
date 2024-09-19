@@ -1,11 +1,17 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net7.0</TargetFramework>
+    <TargetFramework>net8.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <OutputType>Library</OutputType>
   </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Remove="MessagesOld\**" />
+    <EmbeddedResource Remove="MessagesOld\**" />
+    <None Remove="MessagesOld\**" />
+  </ItemGroup>
 
   <ItemGroup>
     <Compile Remove="ByteUtility.cs" />

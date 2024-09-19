@@ -16,8 +16,9 @@
 
 namespace DSC.TLink.Extensions
 {
-	internal static class ByteExtensions
+	public static class BigEndianExtensions
 	{
+		//U8
 		public static bool Bit0(this byte @byte) => (@byte & 0x01) != 0;
 		public static bool Bit1(this byte @byte) => (@byte & 0x02) != 0;
 		public static bool Bit2(this byte @byte) => (@byte & 0x04) != 0;
@@ -26,14 +27,20 @@ namespace DSC.TLink.Extensions
 		public static bool Bit5(this byte @byte) => (@byte & 0x20) != 0;
 		public static bool Bit6(this byte @byte) => (@byte & 0x40) != 0;
 		public static bool Bit7(this byte @byte) => (@byte & 0x80) != 0;
-		public static byte HighByte(this ushort word) => (byte)(word >> 8);
-		public static byte LowByte(this ushort word) => (byte)(word & 0xFF);
-		public static byte HighByte(this Enum enumeration) => Convert.ToUInt16(enumeration).HighByte();
-		public static byte LowByte(this Enum enumeration) => Convert.ToUInt16(enumeration).LowByte();
-		public static IEnumerable<byte> ToBigEndianEnumerable(this ushort word)
-		{
-			yield return word.HighByte();
-			yield return word.LowByte();
-		}
+
+
+		//U16
+
+		public static ushort U16(ReadOnlySpan<byte> span, int offset = 0) => U16(span[offset], span[offset + 1]);
+		public static ushort U16(byte highByte, byte lowByte) => (ushort)(highByte << 8 | lowByte);
+
+		//u16 extensions
+		public static byte HighByte(this ushort u16) => (byte)(u16 >> 8);
+		public static byte LowByte(this ushort u16) => (byte)u16;
+		public static byte U16HighByte(this Enum enumeration) => Convert.ToUInt16(enumeration).HighByte();
+		public static byte U16LowByte(this Enum enumeration) => Convert.ToUInt16(enumeration).LowByte();
+
+		//U32
+		public static (byte HighByte, byte Byte2, byte Byte1, byte LowByte) U32(uint u32) => ((byte)(u32 >> 24), (byte)(u32 >> 16), (byte)(u32 >> 8), (byte)u32);
 	}
 }

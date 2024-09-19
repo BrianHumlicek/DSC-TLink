@@ -15,6 +15,9 @@
 
 using DSC.TLink.DLSProNet;
 using DSC.TLink.ITv2;
+using DSC.TLink.ITv2.Messages;
+using Microsoft.Extensions.Logging;
+using System.Reflection.Metadata.Ecma335;
 using System.Runtime.Intrinsics.Arm;
 using System.Text;
 
@@ -22,9 +25,17 @@ namespace DSC.TLink
 {
 	public class Program
 	{
+		static void MyMethod<T>()
+		{
+
+		}
 		static void Main(string[] args)
 		{
-			using (var api = new ITv2API(null))
+			int? ni = null;
+			if (!ni.HasValue) return;
+			int i = ni.Value;
+
+			using (var api = new ITv2API(new Logger()))
 			{
 				api.Open();
 			}
@@ -51,6 +62,69 @@ namespace DSC.TLink
 			//	var five = client.ReadMessageBCD();
 			//	Console.ReadKey();
 			//}
+		}
+
+	//	public int? nint
+	//	{
+	//		get => GetT<int>();
+	//		set => SetT(value);
+	//	}
+	//	public T GetT<T>() => getstorage<T>().t;
+
+	//	public void SetT<T>(T value) => getstorage<T>().t = value;
+
+	//	storage<T> getstorage<T>() => programstorage switch
+	//	{
+	//		storage<T> gint => gint,
+	//		_ => throw new Exception()
+	//	};
+	//}
+	//class storage<T> : Program
+	//{
+	//	T? field;
+	//	int? length;
+	//	public T t
+	//	{
+	//		get
+	//		{
+	//			if (length == null)
+	//			{
+	//				field = setDefault() ?? throw new ArgumentNullException();
+	//			}
+	//			return field!;
+	//		}
+	//		set
+	//		{
+	//			field = value ?? throw new ArgumentNullException();
+	//			length = dostuff();
+	//		}
+	//	}
+	//	int dostuff() => 0;
+	//	T? setDefault() => default(T);
+
+	}
+	class Logger : ILogger
+	{
+		public IDisposable? BeginScope<TState>(TState state) where TState : notnull
+		{
+			throw new NotImplementedException();
+		}
+
+		public bool IsEnabled(LogLevel logLevel) => true;
+
+		public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter)
+		{
+			if (logLevel >= LogLevel.Debug)
+			{
+
+				IReadOnlyList<KeyValuePair<string, object?>> logValues = state as IReadOnlyList<KeyValuePair<string, object?>>;
+				string s = logValues[0].Value as string;
+				if (s != null)
+				{
+					Console.WriteLine(s);
+					File.WriteAllText("log.txt", s);
+				}
+			}
 		}
 	}
 }

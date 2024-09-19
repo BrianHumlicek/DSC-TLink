@@ -14,13 +14,11 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-namespace DSC.TLink.ITv2
+namespace DSC.TLink.Messages
 {
-	internal enum ProtocolCompatibility
+	internal class MessageException : Exception
 	{
-		Unknown,
-		v129,
-		v202,
-		v223
+		public MessageException() { }
+		public MessageException(string message) : base(message) { }
 	}
 }

@@ -14,13 +14,14 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-namespace DSC.TLink.Messages
+namespace DSC.TLink.ITv2.Enumerations
 {
-	internal abstract partial class BinaryMessage
+	public enum Itv2PanelDeviceType : byte
 	{
-		interface IGetSetProperty<T>
-		{
-			T Property { get; set; }
-		}
+		Unknown = 0xFF,
+		DscInterfaceCommunicatorModule = 0x02,
+		Icontrol = 0x80,
+		KeyPad = 0x81,
+		GenericThirdpartyDevice = 0x8F,
 	}
 }

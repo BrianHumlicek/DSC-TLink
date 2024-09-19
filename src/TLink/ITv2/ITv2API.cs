@@ -14,6 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+using DSC.TLink.ITv2.Enumerations;
 using DSC.TLink.ITv2.Messages;
 using Microsoft.Extensions.Logging;
 using System.Text;
@@ -31,37 +32,42 @@ namespace DSC.TLink.ITv2
 		}
 		public void Open(int port = 3072)
 		{
+			var m = new ITv2CommandHeader();
+			m.CommandData = null;// new byte[5];
+
+			Console.WriteLine($"{TLinkClient.Array2HexString(m.CommandData)}");
+			return;
+
 			string integrationId = "200328900112";
 			byte[] id = Encoding.UTF8.GetBytes(integrationId);
 
-			(List<byte> header, List<byte> messageBytes) = tlinkClient.Listen(port);
-			string s = Encoding.UTF8.GetString(header.ToArray());
+			var header1 = tlinkClient.Listen<ITv2CommandHeader>(port);
 
-			//File.WriteAllText("OpenSessionMessage.txt", TLinkClient.Array2HexString(messageBytes));
-			//var messagearray = TLinkClient.HexString2A brray("15-00-00-06-0A-96-02-03-29-05-41-02-23-02-00-02-00-00-01-01-28-86");
+			var data1 = new OpenSessionMessage(header1.CommandData);
+			byte[] one = data1.FirmwareVersion;
 
-			var message = new OpenSessionMessage(messageBytes.ToArray());
-
-			var response1 = new CommandResponse()
+			var response1 = new ITv2CommandHeader()
 			{
-				Type = 0x0100,
-				Sequence = message.Sequence
+				HostSequence = 1,
+				RemoteSequence = 0,
+				Command = ITv2Command.Command_Response
 			};
 
 			tlinkClient.SendMessage(id, response1.MessageBytes);
 
-			(var header2, var messageBytes2) = tlinkClient.ReadMessage();
+			var header2 = tlinkClient.ReadMessage<CommandResponse>();
 
-			var response2 = new OpenSessionMessage()
+			var responseheader2 = new ITv2CommandHeader()
 			{
-				Type = 0x2010,
+				HostSequence = 0x02,
+				RemoteSequence = 0x00,
 				Command = ITv2Command.Connection_Open_Session,
-				Sequence = 1,
-				DeviceType = message.DeviceType,
-				DeviceID = message.DeviceID,
-
+				CommandData = new OpenSessionMessage().MessageBytes
 			};
-			(var header3, var messageBytes3) = tlinkClient.ReadMessage();
+
+			tlinkClient.SendMessage(id, responseheader2.MessageBytes);
+
+			var header3 = tlinkClient.ReadMessage<ITv2CommandHeader>();
 		}
 
 		public void Dispose()

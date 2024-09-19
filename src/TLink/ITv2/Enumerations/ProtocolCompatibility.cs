@@ -14,22 +14,13 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-using DSC.TLink.Messages;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace DSC.TLink.ITv2
+namespace DSC.TLink.ITv2.Enumerations
 {
-	internal class CRCMessage : BinaryMessage
+	internal enum ProtocolCompatibility
 	{
-		public CRCMessage(byte[]? messageBytes = null) : base(messageBytes) { }
-		protected override void OnInitializing()
-		{
-			throw new NotImplementedException();
-		}
-
+		Unknown,
+		v129,
+		v202,
+		v223
 	}
 }

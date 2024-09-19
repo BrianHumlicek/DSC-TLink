@@ -45,7 +45,7 @@ namespace DSC.TLink
 		/// </summary>
 		/// <param name="address"></param>
 		/// <returns></returns>
-		public (List<byte> header, List<byte> message) Connect(IPAddress address) => Connect(new IPEndPoint(address, 3062));
+		public (byte[] header, byte[] message) Connect(IPAddress address) => Connect(new IPEndPoint(address, 3062));
 		//3060 Local Port [851][105] Ethernet receiver 1
 		//3061 Remote Port [851][104] Ethernet receiver 1
 		//3062 DLS Incomming port [851][012]
@@ -62,15 +62,21 @@ namespace DSC.TLink
 		/// 
 		/// </summary>
 		/// <param name="endPoint"></param>
-		public (List<byte> header, List<byte> message) Connect(IPEndPoint endPoint)
+		public (byte[] header, byte[] message) Connect(IPEndPoint endPoint)
 		{
 			tcpClient = new TcpClient(endPoint);
 
 			tcpClient.Connect(endPoint);
 
-			return ReadMessage();
+			return ReadMessage()[0];
 		}
-		public (List<byte> header, List<byte> message) Listen(int port)
+		public T Listen<T>(int port) where T : BinaryMessage, new()
+		{
+			T result = new T();
+			result.MessageBytes = Listen(port).message.ToArray();
+			return result;
+		}
+		public (byte[] header, byte[] message) Listen(int port)
 		{
 			TcpListener listener = TcpListener.Create(port);
 
@@ -78,7 +84,7 @@ namespace DSC.TLink
 
 			tcpClient = listener.AcceptTcpClient();
 
-			return ReadMessage();
+			return ReadMessage()[0];
 		}
 		public void SendMessageBCD(string bcdMessage) => SendMessage(HexString2Array(bcdMessage));
 		public void SendMessage(byte[] message) => SendMessage(DefaultHeader, message);
@@ -109,13 +115,21 @@ namespace DSC.TLink
 			}
 			else
 			{
-				log?.LogDebug(() => $"Final encoded packet {Array2HexString(packet)}");
+				log?.LogDebug(() => $"Sent     {Array2HexString(packet)}");
 			}
 
 			tcpClient.GetStream().Write(packet, 0, packet.Length);
 		}
-		public string ReadMessageBCD() => Array2HexString(ReadMessage().message);
-		public (List<byte> header, List<byte> message) ReadMessage()
+		public string ReadMessageBCD() => Array2HexString(ReadMessage()[0].message);
+		public T ReadMessage<T>() where T : BinaryMessage, new()
+		{
+			byte[] lastMessage = ReadMessage().Last().message;
+
+			T result = new T();
+			result.MessageBytes = lastMessage;
+			return result;
+		}
+		public (byte[] header, byte[] message)[] ReadMessage()
 		{
 			byte[] packet = readPacket();
 
@@ -125,11 +139,19 @@ namespace DSC.TLink
 				log?.LogTrace(() => $"Unencrypted raw message '{Array2HexString(packet)}'");
 			}
 
-			(var header, var payload) = parseConsoleHeader(packet);
+			log?.LogDebug(() => $"Received {Array2HexString(packet)}");
 
-			log?.LogDebug(() => $"Received header '{Array2HexString(header)}' with payload '{Array2HexString(payload)}'");
+			var messages = parseTLinkFrames(packet).ToArray();
 
-			return (header, payload);
+			if (log?.IsEnabled(LogLevel.Trace) ?? false)
+			{
+				foreach (var message in messages)
+				{
+					log?.LogTrace($"Received header '{Array2HexString(message.header)}' with payload '{Array2HexString(message.payload)}'");
+				}
+			}
+
+			return messages;
 		}
 		byte[] readPacket()
 		{
@@ -159,7 +181,13 @@ namespace DSC.TLink
 			}
 			return packet.ToArray();
 		}
-		(List<byte> header, List<byte> payload) parseConsoleHeader(IEnumerable<byte> packetBytes)
+		/// <summary>
+		/// Parses raw packet bytes into 1 or more messages consisting of a console header and message payload
+		/// </summary>
+		/// <param name="packetBytes"></param>
+		/// <returns>1 or more Tuples of Console header and payload byte lists</returns>
+		/// <exception cref="TLinkPacketException"></exception>
+		IEnumerable<(byte[] header, byte[] payload)> parseTLinkFrames(IEnumerable<byte> packetBytes)
 		{
 			//Consoleheader
 			//[0] Datamode	- This seems to always be 1
@@ -167,44 +195,53 @@ namespace DSC.TLink
 			//[2] Console password LB
 			List<byte> consoleHeader = new List<byte>();    //This is called ConsoleHeader on the connect packet and is always 5 bytes long in the connect packet
 			List<byte> payload = new List<byte>();
-			List<byte> workingList = consoleHeader;
+			List<byte>? workingList = consoleHeader;
 
 			using (var enumerator = packetBytes.GetEnumerator())
-				while (enumerator.MoveNext())
+			while (enumerator.MoveNext())
+			{
+				if (workingList == null)
 				{
-					switch (enumerator.Current)
-					{
-						case 0x7D:  //Stuffed byte
-							if (!enumerator.MoveNext()) goto UnexpectedEndOfPacket;
-							switch (enumerator.Current)
-							{
-								case 0:
-									workingList.Add(0x7D);
-									break;
-								case 1:
-									workingList.Add(0x7E);
-									break;
-								case 2:
-									workingList.Add(0x7F);
-									break;
-								default:
-									throw new TLinkPacketException("Invalid escape value");
-							}
-							break;
-						case 0x7E:   //Start of frame
-							if (workingList == payload) throw new TLinkPacketException("Duplicate start of frame delimiter encountered");
-							workingList = payload;
-							break;
-						case 0x7F:   //End of frame
-							if (workingList == consoleHeader) throw new TLinkPacketException("End of frame encountered before start of frame");
-							return (consoleHeader, payload);
-						default:
-							workingList.Add(enumerator.Current);
-							break;
-					}
+					workingList = consoleHeader;
 				}
+
+				switch (enumerator.Current)
+				{
+					case 0x7D:  //Stuffed byte
+						if (!enumerator.MoveNext()) goto UnexpectedEndOfPacket;
+						switch (enumerator.Current)
+						{
+							case 0:
+								workingList.Add(0x7D);
+								break;
+							case 1:
+								workingList.Add(0x7E);
+								break;
+							case 2:
+								workingList.Add(0x7F);
+								break;
+							default:
+								throw new TLinkPacketException("Invalid escape value");
+						}
+						break;
+					case 0x7E:   //Start of frame
+						if (workingList == payload) throw new TLinkPacketException("Duplicate start of frame delimiter encountered");
+						workingList = payload;
+						break;
+					case 0x7F:   //End of frame
+						if (workingList == consoleHeader) throw new TLinkPacketException("End of frame encountered before start of frame");
+						yield return (consoleHeader.ToArray(), payload.ToArray());
+						consoleHeader.Clear();
+						payload.Clear();
+						workingList = null;
+						break;
+					default:
+						workingList.Add(enumerator.Current);
+						break;
+				}
+			}
 			UnexpectedEndOfPacket:
-			throw new TLinkPacketException("No end of frame delimiter");
+			if (workingList != null) throw new TLinkPacketException("No end of frame delimiter");
 		}
 		byte[] encodeConsoleHeader(IEnumerable<byte> consoleHeader, IEnumerable<byte> payload)
 		{

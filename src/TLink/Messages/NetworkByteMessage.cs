@@ -16,12 +16,21 @@
 
 namespace DSC.TLink.Messages
 {
-	internal abstract partial class BinaryMessage
+	internal abstract record NetworkByteMessage
 	{
-		interface IBitmapFieldMetadata : IFieldMetadata
+		public byte[] ToByteArray()
 		{
-			IEnumerable<string> GetPropertyNames();
-			IGetSetProperty<T> GetPropertyAccessor<T>(string propertyName);
+			List<byte> result = buildByteList();
+			framing?.AddFraming(result);
+			return result.ToArray();
 		}
+		public ReadOnlySpan<byte> Parse(ReadOnlySpan<byte> networkBytes)
+		{
+			framing?.RemoveFraming(ref networkBytes);
+			return initialize(networkBytes);
+		}
+		protected abstract List<byte> buildByteList();
+		protected abstract ReadOnlySpan<byte> initialize(ReadOnlySpan<byte> bytes);
+		protected virtual IAddRemoveFraming? framing => null;
 	}
 }

@@ -16,13 +16,9 @@
 
 namespace DSC.TLink.Messages
 {
-	internal abstract partial class BinaryMessage
+	public interface IAddRemoveFraming
 	{
-		public interface IProcessFraming
-		{
-			int OverheadLength { get; }
-			byte[] AddFraming(byte[] message);
-			byte[] RemoveFraming(byte[] message);
-		}
+		void AddFraming(List<byte> bytes);
+		void RemoveFraming(ref ReadOnlySpan<byte> bytes);
 	}
 }

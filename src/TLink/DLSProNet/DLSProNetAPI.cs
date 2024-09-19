@@ -40,9 +40,9 @@ namespace DSC.TLink.DLSProNet
 		{
 			log?.LogDebug($"{nameof(DLSProNetAPI)} opening '{address}' with installer code '{installerCode}'");
 
-			(List<byte> consoleHeader, List<byte> message) = tlinkClient.Connect(address);
+			(byte[] consoleHeader, byte[] message) = tlinkClient.Connect(address);
 
-			DeviceHeader deviceHeader = DLSProNetHeader.ParseInitialHeader(message);
+			DeviceHeader deviceHeader = DLSProNetHeader.ParseInitialHeader(message.ToList());
 
 			if (deviceHeader.KeyID != null)
 			{
@@ -67,7 +67,7 @@ namespace DSC.TLink.DLSProNet
 
 				tlinkClient.SendMessage(nopMessage);
 
-				var response = tlinkClient.ReadMessage().message;
+				var response = tlinkClient.ReadMessage()[0].message.ToList();
 
 				validateMessage(response);
 
@@ -111,8 +111,8 @@ namespace DSC.TLink.DLSProNet
 			{
 				length.HighByte(),
 				length.LowByte(),
-				command.HighByte(),
-				command.LowByte()
+				command.U16HighByte(),
+				command.U16LowByte()
 			};
 			var csum = calculateSimpleChecksum(result);
 			result.Add(csum.HighByte());

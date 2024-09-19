@@ -18,15 +18,16 @@ using DSC.TLink.Messages;
 
 namespace DSC.TLink.ITv2.Messages
 {
-	internal class CommandResponse : BaseITv2Message
+	internal class CommandResponse : BinaryMessage// : ITv2CommandHeader
 	{
-		public CommandResponse(byte[]? messageBytes = null) : base(messageBytes)
+		public CommandResponse()
 		{
-			Command = ITv2Command.Command_Response;
+			//Command = ITv2Command.Command_Response;
 		}
+		public CommandResponse(byte[] messageBytes) : base(messageBytes) { }
 		protected override void OnInitializing()
 		{
-			base.OnInitializing();
+			//base.OnInitializing();
 			DefineField(new U8(), nameof(pad));
 		}
 		byte pad
