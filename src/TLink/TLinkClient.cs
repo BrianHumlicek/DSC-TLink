@@ -14,38 +14,29 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-using System.Globalization;
-using System.Net;
-using System.Net.Sockets;
 using Microsoft.Extensions.Logging;
 using DSC.TLink.Extensions;
+using System.IO.Pipelines;
+using System.Buffers;
 
 namespace DSC.TLink
 {
-	internal class TLinkClient : IDisposable
+	public class TLinkClient
 	{
-		bool lengthEncodedPackets;
-		ILogger log;
+		protected PipeReader pipeReader;
+		PipeWriter pipeWriter;
+		protected ILogger log;
+		CancellationToken cancellationToken;
+		private CancellationToken cts;
 
-		TcpClient? tcpClient;
-		TLinkAES tlinkAES = new TLinkAES();
-
-		public TLinkClient(bool lengthEncodedPackets, ILogger logger)
+		public TLinkClient(IDuplexPipe pipe, ILogger<TLinkClient> log)
 		{
-			this.lengthEncodedPackets = lengthEncodedPackets;
-			log = logger;
+			pipeReader = pipe.Input;
+			pipeWriter = pipe.Output;
+			this.log = log;
 		}
+		public byte[] DefaultHeader { get; set; } = Array.Empty<byte>();
 
-		public TLinkAES AES => tlinkAES;
-		public bool UseEncryption { get; set; }
-		public byte[] DefaultHeader { get; set; }
-
-		/// <summary>
-		/// Connects to the default DLS port
-		/// </summary>
-		/// <param name="address"></param>
-		/// <returns></returns>
-		public (byte[] header, byte[] message) Connect(IPAddress address) => Connect(new IPEndPoint(address, 3062));
 		//3060 Local Port [851][105] Ethernet receiver 1
 		//3061 Remote Port [851][104] Ethernet receiver 1
 		//3062 DLS Incomming port [851][012]
@@ -58,197 +49,20 @@ namespace DSC.TLink
 		//3094 SA Outgoing port.[851][096]  messages sent after an SMS request
 		//3064 is the "ReceiverPort"  Not sure where this came from
 
-		/// <summary>
-		/// 
-		/// </summary>
-		/// <param name="endPoint"></param>
-		public (byte[] header, byte[] message) Connect(IPEndPoint endPoint)
-		{
-			tcpClient = new TcpClient(endPoint);
-
-			tcpClient.Connect(endPoint);
-
-			return ReadMessage()[0];
-		}
-		public T Listen<T>(int port) where T : BinaryMessage, new()
-		{
-			T result = new T();
-			result.MessageBytes = Listen(port).message.ToArray();
-			return result;
-		}
-		public (byte[] header, byte[] message) Listen(int port)
-		{
-			TcpListener listener = TcpListener.Create(port);
-
-			listener.Start();
-
-			tcpClient = listener.AcceptTcpClient();
-
-			return ReadMessage()[0];
-		}
-		public void SendMessageBCD(string bcdMessage) => SendMessage(HexString2Array(bcdMessage));
-		public void SendMessage(byte[] message) => SendMessage(DefaultHeader, message);
-		public void SendMessage(byte[] header, byte[] message)
+		#region Sending logic
+		public async Task SendMessage(byte[] message) => await SendMessage(DefaultHeader, message);
+		public async Task SendMessage(byte[] header, byte[] message)
 		{
 			log?.LogTrace(() => $"Sending header '{Array2HexString(header)}' with message '{Array2HexString(message)}'");
 
-			var packet = encodeConsoleHeader(header, message);
+			var stuffedConsoleHeader = stuffBytes(header);
+			var stuffedPayload = stuffBytes(message);
 
-			if (UseEncryption)
-			{
-				log?.LogDebug(() => $"Raw packet before encrypting '{Array2HexString(packet)}'");
-				packet = tlinkAES.EncryptRemote(packet);
-			}
+			byte[] assembledPacket = stuffedConsoleHeader.Concat(0x7E).Concat(stuffedPayload).Concat(0x7F).ToArray();
 
-			if (lengthEncodedPackets)
-			{
-				ushort lengthWord = (ushort)packet.Length;
+			log?.LogDebug("Sent     {packet}", assembledPacket);
 
-				byte[] lengthBytes = new byte[] { lengthWord.HighByte(), lengthWord.LowByte() };
-
-				packet = lengthBytes.Concat(packet).ToArray();
-			}
-
-			if (UseEncryption)
-			{
-				log?.LogTrace($"Final encrypted packet '{Array2HexString(packet)}'");
-			}
-			else
-			{
-				log?.LogDebug(() => $"Sent     {Array2HexString(packet)}");
-			}
-
-			tcpClient.GetStream().Write(packet, 0, packet.Length);
-		}
-		public string ReadMessageBCD() => Array2HexString(ReadMessage()[0].message);
-		public T ReadMessage<T>() where T : BinaryMessage, new()
-		{
-			byte[] lastMessage = ReadMessage().Last().message;
-
-			T result = new T();
-			result.MessageBytes = lastMessage;
-			return result;
-		}
-		public (byte[] header, byte[] message)[] ReadMessage()
-		{
-			byte[] packet = readPacket();
-
-			if (UseEncryption)
-			{
-				packet = tlinkAES.DecryptLocal(packet);
-				log?.LogTrace(() => $"Unencrypted raw message '{Array2HexString(packet)}'");
-			}
-
-			log?.LogDebug(() => $"Received {Array2HexString(packet)}");
-
-			var messages = parseTLinkFrames(packet).ToArray();
-
-			if (log?.IsEnabled(LogLevel.Trace) ?? false)
-			{
-				foreach (var message in messages)
-				{
-					log?.LogTrace($"Received header '{Array2HexString(message.header)}' with payload '{Array2HexString(message.payload)}'");
-				}
-			}
-
-			return messages;
-		}
-		byte[] readPacket()
-		{
-			NetworkStream tcpStream = tcpClient.GetStream();
-			Thread.Sleep(500);
-			//This is done because this method would occasionally return 0 byte messages because this method was executing before the packet arrived.
-			//The ReadByte method will block until a byte is available and since the whole packet is transmitted atomically, it effectivelly blocks until the whole packet is ready.
-			byte firstByte = (byte)tcpStream.ReadByte();
-			byte[] buffer = new byte[tcpStream.Socket.Available + 1];
-			tcpStream.Read(buffer, 1, buffer.Length - 1);
-			buffer[0] = firstByte;
-
-			log?.LogTrace(() => $"Raw packet received '{Array2HexString(buffer)}'");
-
-			if (!lengthEncodedPackets)
-			{
-				return buffer;
-			}
-
-			List<byte> packet = new List<byte>(buffer);
-			int encodedLength = IListExtensions.Bytes2Word(packet.PopLeadingByte(), packet.PopLeadingByte());
-			if (packet.Count < encodedLength) throw new TLinkPacketException($"Insufficient number of bytes in packet. '{Array2HexString(buffer)}'");
-			if (packet.Count > encodedLength)
-			{
-				log?.LogWarning($"Packet encoded length is {encodedLength} but {packet.Count} bytes were read. '{Array2HexString(buffer)}'");
-				packet.RemoveRange(encodedLength, packet.Count - encodedLength);
-			}
-			return packet.ToArray();
-		}
-		/// <summary>
-		/// Parses raw packet bytes into 1 or more messages consisting of a console header and message payload
-		/// </summary>
-		/// <param name="packetBytes"></param>
-		/// <returns>1 or more Tuples of Console header and payload byte lists</returns>
-		/// <exception cref="TLinkPacketException"></exception>
-		IEnumerable<(byte[] header, byte[] payload)> parseTLinkFrames(IEnumerable<byte> packetBytes)
-		{
-			//Consoleheader
-			//[0] Datamode	- This seems to always be 1
-			//[1] Console password HB	This is the installer code default 0xCAFE
-			//[2] Console password LB
-			List<byte> consoleHeader = new List<byte>();    //This is called ConsoleHeader on the connect packet and is always 5 bytes long in the connect packet
-			List<byte> payload = new List<byte>();
-			List<byte>? workingList = consoleHeader;
-
-			using (var enumerator = packetBytes.GetEnumerator())
-			while (enumerator.MoveNext())
-			{
-				if (workingList == null)
-				{
-					workingList = consoleHeader;
-				}
-
-				switch (enumerator.Current)
-				{
-					case 0x7D:  //Stuffed byte
-						if (!enumerator.MoveNext()) goto UnexpectedEndOfPacket;
-						switch (enumerator.Current)
-						{
-							case 0:
-								workingList.Add(0x7D);
-								break;
-							case 1:
-								workingList.Add(0x7E);
-								break;
-							case 2:
-								workingList.Add(0x7F);
-								break;
-							default:
-								throw new TLinkPacketException("Invalid escape value");
-						}
-						break;
-					case 0x7E:   //Start of frame
-						if (workingList == payload) throw new TLinkPacketException("Duplicate start of frame delimiter encountered");
-						workingList = payload;
-						break;
-					case 0x7F:   //End of frame
-						if (workingList == consoleHeader) throw new TLinkPacketException("End of frame encountered before start of frame");
-						yield return (consoleHeader.ToArray(), payload.ToArray());
-						consoleHeader.Clear();
-						payload.Clear();
-						workingList = null;
-						break;
-					default:
-						workingList.Add(enumerator.Current);
-						break;
-				}
-			}
-			UnexpectedEndOfPacket:
-			if (workingList != null) throw new TLinkPacketException("No end of frame delimiter");
-		}
-		byte[] encodeConsoleHeader(IEnumerable<byte> consoleHeader, IEnumerable<byte> payload)
-		{
-			var stuffedConsoleHeader = stuffBytes(consoleHeader);
-			var stuffedPayload = stuffBytes(payload);
-
-			return stuffedConsoleHeader.Concat(0x7E).Concat(stuffedPayload).Concat(0x7F).ToArray();
+			await sendPacket(assembledPacket);
 
 			IEnumerable<byte> stuffBytes(IEnumerable<byte> inputBytes)
 			{
@@ -275,12 +89,124 @@ namespace DSC.TLink
 				}
 			}
 		}
-		public static byte[] HexString2Array(string hexString) => hexString.Split('-').Select(s => byte.Parse(s, NumberStyles.HexNumber)).ToArray();
-		public static string Array2HexString(IEnumerable<byte> bytes) => String.Join('-', bytes.Select(b => $"{b:X2}"));
-		public void Dispose()
+		protected virtual async Task sendPacket(byte[] packet) => await pipeWriter.WriteAsync(new ReadOnlyMemory<byte>(packet));
+		#endregion
+		#region Receiving logic
+		public async Task<(byte[] header, byte[] message)> ReadMessage()
 		{
-			tcpClient?.Dispose();
-			tlinkAES.Dispose();
+			ReadOnlySequence<byte> packetSequence = await readPacket();
+
+			var message = parseTLinkFrame(packetSequence);
+
+			//AdvanceTo invalidates the readonly sequence that was read, so it can only be called after we are done with the sequence.
+			pipeReader.AdvanceTo(packetSequence.End);
+
+			if (log?.IsEnabled(LogLevel.Trace) ?? false)
+			{
+				log?.LogTrace("Received header '{header}'", message.header);
+				log?.LogTrace("Received payload '{payload}'", message.payload);
+			}
+
+			return message;
 		}
+
+		async Task<ReadOnlySequence<byte>> readPacket()
+		{
+			using (CancellationTokenSource timeoutCts = new CancellationTokenSource(TimeSpan.FromMilliseconds(3000)))	//TODO implement a configurable timeout
+			do
+			{
+				ReadResult readResult = await pipeReader.ReadAtLeastAsync(2, timeoutCts.Token);
+				ReadOnlySequence<byte> buffer = readResult.Buffer;
+
+				ReadOnlySequence<byte> packetSlice;
+				if (tryGetPacketSlice(buffer, out packetSlice))
+				{
+					return packetSlice;
+				}
+			} while (!timeoutCts.IsCancellationRequested);
+
+			throw new TLinkPacketException("");
+		}
+
+		protected virtual bool tryGetPacketSlice(ReadOnlySequence<byte> buffer, out ReadOnlySequence<byte> packetSlice)
+		{
+			SequencePosition? delimiter = buffer.PositionOf((byte)0x7F);
+			if (!delimiter.HasValue)
+			{
+				packetSlice = default;
+				return false;
+			}
+
+			SequencePosition delimiterInclusivePosition = buffer.GetPosition(1, delimiter.Value);
+
+			packetSlice = buffer.Slice(0, delimiterInclusivePosition);
+			if (log.IsEnabled(LogLevel.Debug))
+			{
+				log.LogDebug("Received {rawPacket}", packetSlice);
+			}
+			return true;
+		}
+
+		protected virtual (byte[] header, byte[] payload) parseTLinkFrame(ReadOnlySequence<byte> packetSequence)
+		{
+			SequenceReader<byte> packetReader = new SequenceReader<byte>(packetSequence);
+			
+			ReadOnlySequence<byte> headerSequence;
+			if (!packetReader.TryReadTo(out headerSequence, 0x7E, true)) throw new TLinkPacketException("Packet parse error.  Unable to find header delimiter 0x7E");
+
+			ReadOnlySequence<byte> payloadSequence;
+			if (!packetReader.TryReadTo(out payloadSequence, 0x7F, true)) throw new TLinkPacketException("Packet parse error.  Unable to find header delimiter 0x7F");
+
+			byte[] header = unstuffSequence(headerSequence);
+			byte[] payload = unstuffSequence(payloadSequence);
+
+			return (header, payload);
+			
+			byte[] unstuffSequence(ReadOnlySequence<byte> stuffedSequence)
+			{
+				//Validate the encoding
+				if (stuffedSequence.PositionOf((byte)0x7E).HasValue) throw new TLinkPacketException("Packet parse error.  Invalid byte 0x7E in encoded packet");
+				if (stuffedSequence.PositionOf((byte)0x7F).HasValue) throw new TLinkPacketException("Packet parse error.  Invalid byte 0x7F in encoded packet");
+
+				List<byte>? resultList = default;
+				SequenceReader<byte> stuffedSequenceReader = new SequenceReader<byte>(stuffedSequence);
+				do
+				{
+					ReadOnlySequence<byte> unencodedSequence;
+					if (!stuffedSequenceReader.TryReadTo(out unencodedSequence, 0x7D, true))	//If we can't find the delimiter that means there are no 'stuffings' in the entire (or remaining) sequence, so time to return
+					{
+						if (resultList == null)
+						{
+							//Short circuit return if there are no encoded bytes
+							return stuffedSequence.ToArray();
+						}
+						resultList.AddRange(stuffedSequenceReader.UnreadSequence.ToArray());
+						return resultList.ToArray();
+					}
+					resultList ??= new List<byte>((int)stuffedSequence.Length - 1); //Length - 1 is because here I know there is at least 1 encoded byte, which reduces the unencoded length by 1, so its a reasonable guess to limit allocation.
+					resultList.AddRange(unencodedSequence.ToArray());
+
+					byte encodedByte;
+					if (!stuffedSequenceReader.TryRead(out encodedByte)) throw new TLinkPacketException("Packet parse error.  Unexpected end of packet.");
+					switch (encodedByte)
+					{
+						case 0:
+							resultList.Add(0x7D);
+							break;
+						case 1:
+							resultList.Add(0x7E);
+							break;
+						case 2:
+							resultList.Add(0x7F);
+							break;
+						default:
+							throw new TLinkPacketException($"Packet parse error.  Unknown encoding value {encodedByte:X2}");
+					}
+
+				} while (true);
+			}
+		}
+		#endregion
+		string Array2HexString(IEnumerable<byte> inputBytes) => ILoggerExtensions.Enumerable2HexString(inputBytes);
 	}
 }

@@ -15,16 +15,28 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 using Microsoft.Extensions.Logging;
+using System.Buffers;
+using System.Globalization;
 
 namespace DSC.TLink.Extensions
 {
 	internal static class ILoggerExtensions
 	{
-		public static void LogDebug(this ILogger log, Func<string> message)
+		//These are intended to be a temporary solution to logging the data that is passed as arrays and sequences.
+		//Ideally, I think there should be some kind of logger that can handle these structures or allow a custom
+		//output format.
+		public static void LogDebug(this ILogger log, string message, ReadOnlySequence<byte> sequence)
 		{
 			if (log.IsEnabled(LogLevel.Debug))
 			{
-				log.LogDebug(message());
+				log.LogDebug(message, sequence.ToArray());
+			}
+		}
+		public static void LogDebug(this ILogger log, string message, IEnumerable<byte> bytes)
+		{
+			if (log.IsEnabled(LogLevel.Debug))
+			{
+				log.LogDebug(message, Enumerable2HexString(bytes));
 			}
 		}
 		public static void LogTrace(this ILogger log, Func<string> message)
@@ -34,5 +46,7 @@ namespace DSC.TLink.Extensions
 				log.LogTrace(message());
 			}
 		}
+		public static byte[] HexString2Array(string hexString) => hexString.Split('-').Select(s => byte.Parse(s, NumberStyles.HexNumber)).ToArray();
+		public static string Enumerable2HexString(IEnumerable<byte> bytes) => String.Join('-', bytes.Select(b => $"{b:X2}"));
 	}
 }

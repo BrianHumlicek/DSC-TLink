@@ -14,26 +14,43 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-using DSC.TLink.Messages;
-
-namespace DSC.TLink.ITv2.Messages
+namespace DSC.TLink.ITv2
 {
-	internal class CommandResponse : BinaryMessage// : ITv2CommandHeader
+	public partial class ITv2Server : IITV2ServerAPI
 	{
-		public CommandResponse()
+		void IITV2ServerAPI.ArmAway()
 		{
-			//Command = ITv2Command.Command_Response;
+			throw new NotImplementedException();
 		}
-		public CommandResponse(byte[] messageBytes) : base(messageBytes) { }
-		protected override void OnInitializing()
+
+		void IITV2ServerAPI.ArmStay()
 		{
-			//base.OnInitializing();
-			DefineField(new U8(), nameof(pad));
+			throw new NotImplementedException();
 		}
-		byte pad
+
+		void IITV2ServerAPI.Disarm()
 		{
-			get => GetProperty<byte>();
-			set => SetProperty(value);
+			throw new NotImplementedException();
+		}
+
+		void IITV2ServerAPI.GetAlarmConfiguration()
+		{
+			throw new NotImplementedException();
+		}
+
+		void IITV2ServerAPI.GetAlarmStatus()
+		{
+			throw new NotImplementedException();
+		}
+
+		void IITV2ServerAPI.GetPartitionConfiguration()
+		{
+			throw new NotImplementedException();
+		}
+
+		void IITV2ServerAPI.GetPartitionStatus()
+		{
+			throw new NotImplementedException();
 		}
 	}
 }

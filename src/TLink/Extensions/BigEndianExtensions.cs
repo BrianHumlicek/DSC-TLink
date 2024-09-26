@@ -39,6 +39,7 @@ namespace DSC.TLink.Extensions
 		public static byte LowByte(this ushort u16) => (byte)u16;
 		public static byte U16HighByte(this Enum enumeration) => Convert.ToUInt16(enumeration).HighByte();
 		public static byte U16LowByte(this Enum enumeration) => Convert.ToUInt16(enumeration).LowByte();
+		public static byte[] ToArray(this ushort u16) => [u16.HighByte(), u16.LowByte()];
 
 		//U32
 		public static (byte HighByte, byte Byte2, byte Byte1, byte LowByte) U32(uint u32) => ((byte)(u32 >> 24), (byte)(u32 >> 16), (byte)(u32 >> 8), (byte)u32);

@@ -14,9 +14,21 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+using System.Runtime.CompilerServices;
+
 namespace DSC.TLink.Messages
 {
-	public interface IFormattedArray
+	public interface INullableArrayProperty
 	{
+		byte[]? Get();
+		void Set(byte[]? value, [CallerMemberName]string? propertyName=null);
+		bool HasValue { get; }
+		bool TrySet(ref ReadOnlySpan<byte> span);
+	}
+	public interface IArrayProperty
+	{
+		byte[] Get();
+		void Set(byte[] value, [CallerMemberName] string? propertyName = null);
+		bool TrySet(ref ReadOnlySpan<byte> span);
 	}
 }

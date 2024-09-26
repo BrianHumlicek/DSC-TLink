@@ -73,7 +73,7 @@ namespace DSC.TLink.ITv2.Enumerations
 		AccessLevel_Lead_InOut = 1026, // 0x0402
 		Command_Error = 1281, // 0x0501
 		Command_Response = 1282, // 0x0502
-		Connection_Poll = 1536, // 0x0600
+		Connection_Poll = 1536, // 0x0600	NOP
 		Connection_Open_Session = 1546, // 0x060A
 		Connection_End_session = 1547, // 0x060B
 		Connection_Inform_TX_and_RX_buffer_sizes = 1548, // 0x060C

@@ -38,19 +38,12 @@ namespace DSC.TLink
 		public byte[] LocalKey { set { localAlgorithm.Key = value; } }
 		public byte[] RemoteKey { set { remoteAlgorithm.Key = value; } }
 		public byte[] EncryptLocal(byte[] plainText) => encrypt(plainText, localAlgorithm);
-		public byte[] DecryptLocal(byte[] cipherText) => decrypt(cipherText, localAlgorithm);
+		public byte[] DecryptLocal(ReadOnlySpan<byte> cipherText) => decrypt(cipherText, localAlgorithm);
 		public byte[] EncryptRemote(byte[] plainText) => encrypt(plainText, remoteAlgorithm);
 		public byte[] DecryptRemote(byte[] cipherText) => decrypt(cipherText, remoteAlgorithm);
-		byte[] decrypt(byte[] cipherText, SymmetricAlgorithm algorithm)
+		byte[] decrypt(ReadOnlySpan<byte> cipherText, SymmetricAlgorithm algorithm)
 		{
-			//cipherText = cipherText.Pad16().ToArray();
-
-			byte[] plainText = new byte[cipherText.Length];
-
-			using (ICryptoTransform decryptor = algorithm.CreateDecryptor())
-			{
-				decryptor.TransformBlock(cipherText, 0, cipherText.Length, plainText, 0);
-			}
+			byte[] plainText = algorithm.DecryptEcb(cipherText, PaddingMode.Zeros);
 
 			return plainText;
 		}

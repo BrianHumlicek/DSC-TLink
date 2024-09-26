@@ -24,13 +24,13 @@ namespace DSC.TLink.DLSProNet
 	public class DLSProNetAPI : IDisposable
 	{
 		ILogger log;
-		TLinkClient tlinkClient;
+		TLinkClient dlsTLinkClient;
 		System.Timers.Timer heartbeat;
 		public DLSProNetAPI(ILogger logger)
 		{
 			log = logger;
 
-			tlinkClient = new TLinkClient(lengthEncodedPackets: true, logger);
+			//dlsTLinkClient = new DLSTLinkClient(logger);
 
 			heartbeat = new System.Timers.Timer(TimeSpan.FromSeconds(1));
 			heartbeat.Elapsed += sendHeartbeat;
@@ -40,21 +40,21 @@ namespace DSC.TLink.DLSProNet
 		{
 			log?.LogDebug($"{nameof(DLSProNetAPI)} opening '{address}' with installer code '{installerCode}'");
 
-			(byte[] consoleHeader, byte[] message) = tlinkClient.Connect(address);
+			//(byte[] consoleHeader, byte[] message) = tlinkClient.Connect(address);
 
-			DeviceHeader deviceHeader = DLSProNetHeader.ParseInitialHeader(message.ToList());
+			//DeviceHeader deviceHeader = DLSProNetHeader.ParseInitialHeader(message.ToList());
 
-			if (deviceHeader.KeyID != null)
-			{
-				var aesKey = AESKeyGenerator.FromDeviceHeader(deviceHeader);
-				//DLSProNet uses the same key for all messages, sent or received, so set both local and remote keys the same.
-				tlinkClient.AES.LocalKey = aesKey;
-				tlinkClient.AES.RemoteKey = aesKey;
-				tlinkClient.UseEncryption = true;
-			}
+			//if (deviceHeader.KeyID != null)
+			//{
+			//	var aesKey = AESKeyGenerator.FromDeviceHeader(deviceHeader);
+			//	//DLSProNet uses the same key for all messages, sent or received, so set both local and remote keys the same.
+			//	tlinkClient.AES.LocalKey = aesKey;
+			//	tlinkClient.AES.RemoteKey = aesKey;
+			//	tlinkClient.UseEncryption = true;
+			//}
 
 			byte dataMode = 0x01;
-			tlinkClient.DefaultHeader = new byte[] { dataMode, installerCode.HighByte(), installerCode.LowByte() };
+			dlsTLinkClient.DefaultHeader = new byte[] { dataMode, installerCode.HighByte(), installerCode.LowByte() };
 
 			heartbeat.Start();
 			log?.LogInformation($"{nameof(DLSProNetAPI)} open");
@@ -65,18 +65,18 @@ namespace DSC.TLink.DLSProNet
 			{
 				var nopMessage = encodeCommand(DLSProNetCommand.NOP);
 
-				tlinkClient.SendMessage(nopMessage);
+				//tlinkClient.SendMessage(nopMessage);
 
-				var response = tlinkClient.ReadMessage()[0].message.ToList();
+				//var response = tlinkClient.ReadMessage()[0].message.ToList();
 
-				validateMessage(response);
+				//validateMessage(response);
 
-				var responseCommand = parseCommand(response);
+				//var responseCommand = parseCommand(response);
 
-				if (responseCommand != DLSProNetCommand.ACK)
-				{
+				//if (responseCommand != DLSProNetCommand.ACK)
+				//{
 					//Figure out what to do with error
-				}
+				//}
 			}
 			catch
 			{
@@ -124,7 +124,7 @@ namespace DSC.TLink.DLSProNet
 		{
 			heartbeat.Elapsed -= sendHeartbeat;
 			heartbeat.Dispose();
-			tlinkClient.Dispose();
+			//dlsTLinkClient.Dispose();
 		}
 	}
 }

@@ -38,7 +38,7 @@ namespace DSC.TLink.ITv2.Messages
 		public void RemoveFraming(ref ReadOnlySpan<byte> bytes)
 		{
 			int encodedCRC = bytes.PopTrailingWord();
-			int calculatedCRC = crc16(bytes.ToByteEnumerable());
+			int calculatedCRC = crc16(bytes.ToArray());
 			if (encodedCRC != calculatedCRC) throw new MessageException($"Framing CRC error!  Expected 0x{encodedCRC:X4} but calculated 0x{calculatedCRC:X4}");
 			byte lengthByte1 = bytes.PopByte();
 			ushort encodedLength = lengthByte1.Bit7() ? BigEndianExtensions.U16((byte)(lengthByte1 & 0x7F), bytes.PopByte())

@@ -30,9 +30,9 @@ namespace DSC.TLink.Messages.Extensions
 		}
 		public static void PopAndSetValue(this ref ReadOnlySpan<byte> span, Action<byte> setter, [CallerArgumentExpression(nameof(setter))] string? message = null)
 		{
-			if (!TryPopAndSetValue(ref span, setter, message)) throw new Exception();
+			if (!TryPopAndSetValue(ref span, setter)) throw new Exception();
 		}
-		public static bool TryPopAndSetValue(this ref ReadOnlySpan<byte> span, Action<byte> setter, [CallerArgumentExpression(nameof(setter))] string? message = null)
+		public static bool TryPopAndSetValue(this ref ReadOnlySpan<byte> span, Action<byte> setter)
 		{
 			if (span.Length < 1) return false;
 			setter(span[0]);
@@ -49,9 +49,9 @@ namespace DSC.TLink.Messages.Extensions
 		}
 		public static void PopAndSetValue(this ref ReadOnlySpan<byte> span, Action<ushort> setter, [CallerArgumentExpression(nameof(setter))] string? message = null)
 		{
-			if (!TryPopAndSetValue(ref span, setter, message)) throw new Exception();
+			if (!TryPopAndSetValue(ref span, setter)) throw new Exception();
 		}
-		public static bool TryPopAndSetValue(this ref ReadOnlySpan<byte> span, Action<ushort> setter, [CallerArgumentExpression(nameof(setter))] string? message = null)
+		public static bool TryPopAndSetValue(this ref ReadOnlySpan<byte> span, Action<ushort> setter)
 		{
 			if (span.Length < 2) return false;
 			setter(BigEndianExtensions.U16(span));
@@ -67,13 +67,13 @@ namespace DSC.TLink.Messages.Extensions
 			return result;
 		}
 
-		public static IEnumerable<byte> ToByteEnumerable(this ReadOnlySpan<byte> span)
+		public static void PopAndSetValue(this ref ReadOnlySpan<byte> span, IArrayProperty arrayProperty, [CallerArgumentExpression(nameof(arrayProperty))] string? message = null)
 		{
-			var enumerator = span.GetEnumerator();
-			while (enumerator.MoveNext())
-			{
-				yield return enumerator.Current;
-			}
+			if (!arrayProperty.TrySet(ref span)) throw new MessageException();
+		}
+		public static bool TryPopAndSetValue(this ref ReadOnlySpan<byte> span, INullableArrayProperty nullableArrayProperty)
+		{
+			return nullableArrayProperty.TrySet(ref span);
 		}
 	}
 }

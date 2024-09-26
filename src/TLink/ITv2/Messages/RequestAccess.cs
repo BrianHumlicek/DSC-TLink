@@ -14,9 +14,24 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-namespace DSC.TLink.Messages
+using DSC.TLink.Messages;
+using DSC.TLink.Messages.Extensions;
+
+namespace DSC.TLink.ITv2.Messages
 {
-	public class FixedArrayFormatter : IFormattedArray
+	internal record RequestAccess : NetworkByteMessage
 	{
+		public byte[] Payload { get => payload.Get(); set => payload.Set(value); }
+		readonly IArrayProperty payload = new LeadingLengthArray();
+		protected override List<byte> buildByteList()
+		{
+			return Payload.ToList();
+		}
+
+		protected override ReadOnlySpan<byte> initialize(ReadOnlySpan<byte> bytes)
+		{
+			bytes.PopAndSetValue(payload);
+			return bytes;
+		}
 	}
 }
