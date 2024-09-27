@@ -18,7 +18,7 @@ using System.Security.Cryptography;
 
 namespace DSC.TLink.ITv2
 {
-	public class ITv2AES
+	internal class ITv2AES
 	{
 		public static (byte[] initializer, byte[]encodedKey) GenerateKeyAndType1Initializer(string integrationAccessCode)
 		{

@@ -16,7 +16,7 @@
 
 namespace DSC.TLink.Messages
 {
-	public abstract class ArrayProperty : IArrayProperty, INullableArrayProperty
+	internal abstract class ArrayProperty : IArrayProperty, INullableArrayProperty
 	{
 		byte[]? bytes;
 		protected byte[] Bytes { get => bytes ?? GetDefaultValue(); set => bytes = value; }

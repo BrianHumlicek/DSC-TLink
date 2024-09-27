@@ -16,7 +16,7 @@
 
 namespace DSC.TLink.Messages
 {
-	public interface IAddRemoveFraming
+	internal interface IAddRemoveFraming
 	{
 		void AddFraming(List<byte> bytes);
 		void RemoveFraming(ref ReadOnlySpan<byte> bytes);

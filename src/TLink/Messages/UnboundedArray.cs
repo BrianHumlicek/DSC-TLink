@@ -16,7 +16,7 @@
 
 namespace DSC.TLink.Messages
 {
-	public class UnboundedArray : ArrayProperty
+	internal class UnboundedArray : ArrayProperty
 	{
 		public override bool TrySet(ref ReadOnlySpan<byte> span)
 		{

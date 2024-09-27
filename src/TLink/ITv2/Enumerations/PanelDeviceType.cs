@@ -16,7 +16,7 @@
 
 namespace DSC.TLink.ITv2.Enumerations
 {
-	public enum Itv2PanelDeviceType : byte
+	internal enum Itv2PanelDeviceType : byte
 	{
 		Unknown = 0xFF,
 		DscInterfaceCommunicatorModule = 0x02,

@@ -19,14 +19,7 @@ using DSC.TLink.ITv2.Enumerations;
 using DSC.TLink.ITv2.Messages;
 using DSC.TLink.Messages;
 using Microsoft.Extensions.Logging;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Reflection.PortableExecutable;
-using System.Runtime.InteropServices;
 using System.Security.Cryptography;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace DSC.TLink.ITv2
 {

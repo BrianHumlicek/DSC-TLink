@@ -18,7 +18,7 @@ using System.Runtime.CompilerServices;
 
 namespace DSC.TLink.Messages
 {
-	public interface INullableArrayProperty
+	internal interface INullableArrayProperty
 	{
 		byte[]? Get();
 		void Set(byte[]? value, [CallerMemberName]string? propertyName=null);
@@ -26,7 +26,7 @@ namespace DSC.TLink.Messages
 		bool TrySet(ref ReadOnlySpan<byte> span);
 		byte[] ToMessageBytes();
 	}
-	public interface IArrayProperty
+	internal interface IArrayProperty
 	{
 		byte[] Get();
 		void Set(byte[] value, [CallerMemberName] string? propertyName = null);

@@ -16,7 +16,7 @@
 
 namespace DSC.TLink.ITv2.Enumerations
 {
-	public enum ITv2Command : ushort
+	internal enum ITv2Command : ushort
 	{
 		Simple_Ack = 0,
 		Logging_Get_Event_Buffer_information = 256, // 0x0100

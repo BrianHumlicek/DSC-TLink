@@ -19,7 +19,7 @@ using System.Runtime.CompilerServices;
 
 namespace DSC.TLink.Messages.Extensions
 {
-	public static class ByteReadOnlySpanExtensions
+	internal static class ByteReadOnlySpanExtensions
 	{
 		//byte
 		public static byte PopByte(this ref ReadOnlySpan<byte> span, string? message = null)

@@ -19,7 +19,7 @@ using System.Runtime.Intrinsics.X86;
 
 namespace DSC.TLink.Messages.Extensions
 {
-	public static class ByteListExtensions
+	internal static class ByteListExtensions
 	{
 		//u16
 		public static void Add(this List<byte> list, short value) => Add(list, (ushort)value);

@@ -16,7 +16,7 @@
 
 namespace DSC.TLink.Messages
 {
-	public class FixedArrayProperty : ArrayProperty
+	internal class FixedArrayProperty : ArrayProperty
 	{
 		readonly int length;
 		public FixedArrayProperty(int length)
