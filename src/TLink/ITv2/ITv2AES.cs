@@ -14,43 +14,25 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Security.Cryptography;
 
 namespace DSC.TLink.ITv2
 {
 	public class ITv2AES
 	{
-
-		byte[] LocalInitKey = [0x00, 0x03, 0x4F, 0x08,
-					   0x00, 0x03, 0x4F, 0x08,
-					   0x00, 0x03, 0x4F, 0x08,
-					   0x00, 0x03, 0x4F, 0x08 ];
-
-		//public byte[] GenerateKey(byte[] initializer)
-		//{
-		//	byte[] result = zipperMerge(key1, initializer).ToArray();
-
-		//}
-		IEnumerable<byte> evenIndexes(IEnumerable<byte> bytes) => bytes.Where((element, index) => index % 2 == 0);
-		IEnumerable<byte> oddIndexes(IEnumerable<byte> bytes) => bytes.Where((element, index) => index % 2 == 1);
-		IEnumerable<byte> evenOddZip(IEnumerable<byte> evenIndexes, IEnumerable<byte> oddIndexes) => evenIndexes.Zip(oddIndexes, (evenElement, oddElement) => new byte[] { evenElement, oddElement }).SelectMany(e => e);
-		public byte[] GenerateType1Initializer(string integrationAccessCode, byte[] localKey)
+		public static (byte[] initializer, byte[]encodedKey) GenerateKeyAndType1Initializer(string integrationAccessCode)
 		{
-			byte[] zipped = evenOddZip(LocalInitKey, localKey).ToArray();
+			byte[] randomBytes = RandomNumberGenerator.GetBytes(32);
+			var checkBytes = evenIndexes(randomBytes);
+			byte[] encodedKey = oddIndexes(randomBytes).ToArray();
 
 			byte[] cipherText;
 			using (Aes aes = Aes.Create())
 			{
 				aes.Key = transformKeyString(integrationAccessCode);
-				cipherText = aes.EncryptEcb(zipped, PaddingMode.Zeros);
+				cipherText = aes.EncryptEcb(randomBytes, PaddingMode.Zeros);
 			}
-
-			//return Enumerable.Repeat((byte)0x01, 16).Concat(cipherText).ToArray();
-			return LocalInitKey.Concat(cipherText).ToArray();
+			return (checkBytes.Concat(cipherText).ToArray(), encodedKey);
 		}
 		/// <summary>
 		/// Calculate the remote AES key for Type 1 encryption
@@ -59,8 +41,9 @@ namespace DSC.TLink.ITv2
 		/// <param name="remoteInitializer">The command payload sent by the panel with command 0x060E Connection_Request_Access</param>
 		/// <returns>The AES key used to decrypt messages from the panel</returns>
 		/// <exception cref="Exception"></exception>
-		public byte[] ParseType1Initializer(string integrationIdentificationNumber, byte[] remoteInitializer)
+		public static byte[] ParseType1Initializer(string integrationIdentificationNumber, byte[] remoteInitializer)
 		{
+			var checkBytes = remoteInitializer.Take(16);
 			var cipherText = remoteInitializer.Skip(16).Take(32).ToArray();
 
 			byte[] plainText;
@@ -68,19 +51,19 @@ namespace DSC.TLink.ITv2
 			{
 				aes.Key = transformKeyString(integrationIdentificationNumber);
 				plainText = aes.DecryptEcb(cipherText, PaddingMode.Zeros);
-
 			}
 
-			if (!evenIndexes(plainText).SequenceEqual(remoteInitializer.Take(16))) throw new Exception("");
+			if (!checkBytes.SequenceEqual(evenIndexes(plainText))) throw new Exception("");
 
 			return oddIndexes(plainText).ToArray();
 		}
-
-		public byte[] transformKeyString(string keyString)
+		static byte[] transformKeyString(string keyString)
 		{
 			string first8 = keyString.Substring(0, 8);
-			//This makes a 32 digit base 10 string.  When read as base 16, it makes a 16 byte array.
+			//This makes a 32 digit base 10 string, and the reads it as base 16 string which it makes a 16 byte array.
 			return Convert.FromHexString($"{first8}{first8}{first8}{first8}");
 		}
+		static IEnumerable<byte> evenIndexes(IEnumerable<byte> bytes) => bytes.Where((element, index) => index % 2 == 0);
+		static IEnumerable<byte> oddIndexes(IEnumerable<byte> bytes) => bytes.Where((element, index) => index % 2 == 1);
 	}
 }

@@ -54,23 +54,24 @@ namespace DSC.TLink.ITv2
 
 			var three = await itv2Session.readMessage<RequestAccess>();
 
-			ITv2AES tv2AES = new ITv2AES();
-			byte[] remoteKey = tv2AES.ParseType1Initializer("200328900112", three.Payload);
-			byte[] localKey = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 0, 1, 2, 3, 4, 5];
-			itv2Session.EnableSendAES(remoteKey);
+			byte[] transmitKey = ITv2AES.ParseType1Initializer("200328900112", three.Payload);
+
+			itv2Session.EnableSendAES(transmitKey);
 
 			await itv2Session.sendMessage(ITv2Command.Command_Response);
 			var four = await itv2Session.readMessage<ITv2Header>();
 
 
 
-			var requestAccess = new RequestAccess();
-			requestAccess.Payload = tv2AES.GenerateType1Initializer("12345678", localKey);
-
+			(byte[] initializer, byte[] receivingKey) = ITv2AES.GenerateKeyAndType1Initializer("12345678");
+			var requestAccess = new RequestAccess()
+			{
+				Payload = initializer
+			};
 			
 			await itv2Session.sendMessage(ITv2Command.Connection_Request_Access, requestAccess);
 
-			itv2Session.EnableReceiveAES(localKey);
+			itv2Session.EnableReceiveAES(receivingKey);
 
 			var five = await itv2Session.readMessage<ITv2Header>();
 			await itv2Session.SendSimpleAck();
