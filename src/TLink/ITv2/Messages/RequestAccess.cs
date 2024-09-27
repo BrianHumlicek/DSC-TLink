@@ -25,7 +25,7 @@ namespace DSC.TLink.ITv2.Messages
 		readonly IArrayProperty payload = new LeadingLengthArray();
 		protected override List<byte> buildByteList()
 		{
-			return Payload.ToList();
+			return payload.ToMessageBytes().ToList();
 		}
 
 		protected override ReadOnlySpan<byte> initialize(ReadOnlySpan<byte> bytes)

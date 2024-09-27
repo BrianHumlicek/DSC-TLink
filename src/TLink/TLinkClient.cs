@@ -112,7 +112,7 @@ namespace DSC.TLink
 
 		async Task<ReadOnlySequence<byte>> readPacket()
 		{
-			using (CancellationTokenSource timeoutCts = new CancellationTokenSource(TimeSpan.FromMilliseconds(3000)))	//TODO implement a configurable timeout
+			using (CancellationTokenSource timeoutCts = new CancellationTokenSource(TimeSpan.FromMilliseconds(300000)))	//TODO implement a configurable timeout
 			do
 			{
 				ReadResult readResult = await pipeReader.ReadAtLeastAsync(2, timeoutCts.Token);

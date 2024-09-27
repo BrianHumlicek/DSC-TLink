@@ -20,7 +20,7 @@ using System.Globalization;
 
 namespace DSC.TLink.Extensions
 {
-	internal static class ILoggerExtensions
+	public static class ILoggerExtensions
 	{
 		//These are intended to be a temporary solution to logging the data that is passed as arrays and sequences.
 		//Ideally, I think there should be some kind of logger that can handle these structures or allow a custom

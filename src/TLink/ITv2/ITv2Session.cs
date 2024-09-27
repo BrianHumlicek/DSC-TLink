@@ -22,6 +22,7 @@ using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection.PortableExecutable;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Text;
@@ -98,7 +99,16 @@ namespace DSC.TLink.ITv2
 				HostSequence = 0,	//This doesn't get seem to be set in a simple ack
 				RemoteSequence = tl280Sequence
 			};
-			await tlinkClient.SendMessage(simpleAck.ToByteArray());
+			if (sendAESActive)
+			{
+				byte[] plainText = simpleAck.ToByteArray();
+				log.LogDebug("Unencrypted {plainText}", plainText);
+				await tlinkClient.SendMessage(sendAES.EncryptEcb(plainText, PaddingMode.Zeros));
+			}
+			else
+			{
+				await tlinkClient.SendMessage(simpleAck.ToByteArray());
+			}
 		}
 		public async Task sendMessage(ITv2Command? command, NetworkByteMessage? message = null)
 		{

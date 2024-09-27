@@ -29,7 +29,7 @@ namespace DSC.TLink.Messages
 		public override bool TrySet(ref ReadOnlySpan<byte> span)
 		{
 			if (span.Length < length) return false;
-			bytes = span.Slice(0, length).ToArray();
+			Bytes = span.Slice(0, length).ToArray();
 			span = span.Slice(length);
 			return true;
 		}

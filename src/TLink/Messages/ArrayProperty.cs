@@ -18,15 +18,17 @@ namespace DSC.TLink.Messages
 {
 	public abstract class ArrayProperty : IArrayProperty, INullableArrayProperty
 	{
-		protected byte[]? bytes;
+		byte[]? bytes;
+		protected byte[] Bytes { get => bytes ?? GetDefaultValue(); set => bytes = value; }
 		protected abstract byte[] GetDefaultValue();
 		protected abstract bool validateLength(byte[] value);
 		
 		//All interfaces
 		public abstract bool TrySet(ref ReadOnlySpan<byte> span);
+		public virtual byte[] ToMessageBytes() => Bytes;
 
 		//IArrayProperty
-		byte[] IArrayProperty.Get() => bytes ?? GetDefaultValue();
+		byte[] IArrayProperty.Get() => Bytes;
 		void IArrayProperty.Set(byte[] value, string? propertyName)
 		{
 			if (value == null) throw new ArgumentNullException($"");

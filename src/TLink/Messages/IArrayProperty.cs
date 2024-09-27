@@ -24,11 +24,13 @@ namespace DSC.TLink.Messages
 		void Set(byte[]? value, [CallerMemberName]string? propertyName=null);
 		bool HasValue { get; }
 		bool TrySet(ref ReadOnlySpan<byte> span);
+		byte[] ToMessageBytes();
 	}
 	public interface IArrayProperty
 	{
 		byte[] Get();
 		void Set(byte[] value, [CallerMemberName] string? propertyName = null);
 		bool TrySet(ref ReadOnlySpan<byte> span);
+		byte[] ToMessageBytes();
 	}
 }

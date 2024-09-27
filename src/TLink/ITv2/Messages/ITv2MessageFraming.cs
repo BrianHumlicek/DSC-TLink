@@ -37,13 +37,27 @@ namespace DSC.TLink.ITv2.Messages
 
 		public void RemoveFraming(ref ReadOnlySpan<byte> bytes)
 		{
-			int encodedCRC = bytes.PopTrailingWord();
-			int calculatedCRC = crc16(bytes.ToArray());
-			if (encodedCRC != calculatedCRC) throw new MessageException($"Framing CRC error!  Expected 0x{encodedCRC:X4} but calculated 0x{calculatedCRC:X4}");
+			int encodedCRC;
+			int calculatedCRC;
+
 			byte lengthByte1 = bytes.PopByte();
-			ushort encodedLength = lengthByte1.Bit7() ? BigEndianExtensions.U16((byte)(lengthByte1 & 0x7F), bytes.PopByte())
-													  : lengthByte1;
-			if (encodedLength != bytes.Length + 2) throw new MessageException($"Framing length mismatch!  Expected {encodedLength} bytes and got {bytes.Length + 2} bytes");
+			if (lengthByte1.Bit7())
+			{
+				byte lengthByte2 = bytes.PopByte();
+				ushort encodedLength = BigEndianExtensions.U16((byte)(lengthByte1 & 0x7F), bytes.PopByte());
+				if (encodedLength > bytes.Length) throw new MessageException($"Encoded message length {encodedLength} exceeds data length {bytes.Length}!");
+				bytes = bytes.Slice(0, encodedLength);
+				encodedCRC = bytes.PopTrailingWord();
+				calculatedCRC = crc16([lengthByte1, lengthByte2, .. bytes]);
+			}
+			else
+			{
+				if (lengthByte1 > bytes.Length) throw new MessageException($"Encoded message length {lengthByte1} exceeds data length {bytes.Length}!");
+				bytes = bytes.Slice(0, lengthByte1);
+				encodedCRC = bytes.PopTrailingWord();
+				calculatedCRC = crc16([lengthByte1, .. bytes]);
+			}
+			if (encodedCRC != calculatedCRC) throw new MessageException($"Framing CRC error!  Expected 0x{encodedCRC:X4} but calculated 0x{calculatedCRC:X4}");
 		}
 
 		int crc16(IEnumerable<byte> crcRange)

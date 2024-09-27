@@ -20,7 +20,7 @@ namespace DSC.TLink.Messages
 	{
 		public override bool TrySet(ref ReadOnlySpan<byte> span)
 		{
-			bytes = span.ToArray();
+			Bytes = span.ToArray();
 			span = ReadOnlySpan<byte>.Empty;
 			return true;
 		}

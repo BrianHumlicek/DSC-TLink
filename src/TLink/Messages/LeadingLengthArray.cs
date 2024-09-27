@@ -23,10 +23,11 @@ namespace DSC.TLink.Messages
 			if (span.Length < 1) return false;
 			byte length = span[0];
 			if (span.Length < length + 1) return false;
-			bytes = span.Slice(1, length).ToArray();
+			Bytes = span.Slice(1, length).ToArray();
 			span = span.Slice(length + 1);
 			return true;
 		}
+		public override byte[] ToMessageBytes() => [ (byte)Bytes.Length, .. Bytes ];
 		protected override byte[] GetDefaultValue() => Array.Empty<byte>();
 		protected override bool validateLength(byte[] value) => value.Length < 256;
 	}

@@ -65,15 +65,15 @@ namespace DSC.TLink.ITv2
 
 
 			var requestAccess = new RequestAccess();
-			requestAccess.Payload = tv2AES.GenerateType1Initializer("12345678", tv2AES.transformKeyString("12345678"));
+			requestAccess.Payload = tv2AES.GenerateType1Initializer("12345678", localKey);
 
 			
 			await itv2Session.sendMessage(ITv2Command.Connection_Request_Access, requestAccess);
 
+			itv2Session.EnableReceiveAES(localKey);
 
 			var five = await itv2Session.readMessage<ITv2Header>();
 			await itv2Session.SendSimpleAck();
-			itv2Session.EnableReceiveAES(localKey);
 
 			return true;
 		}
