@@ -20,8 +20,24 @@ namespace DSC.TLink.ITv2
 {
 	internal class ITv2AES
 	{
+		public static byte[] GetRandomKey() => RandomNumberGenerator.GetBytes(16);
+		//The Type2 initializer protocol is not 'symetric' like the Type1.  Instead, the same transform
+		// used to 'encode' the local initializer is the same transform used to 'decode' the remote initializer.
+		public static byte[] Type2InitializerTransform(string integrationAccessCode, byte[] initializer)
+		{
+			if (integrationAccessCode.Length != 32) throw new ArgumentException($"integration access code is {integrationAccessCode.Length} digits long; it needs to be 32.", nameof(integrationAccessCode));
+			if (initializer.Length != 16) throw new ArgumentException(nameof(initializer));
+
+			using (Aes aes = Aes.Create())
+			{
+				aes.Key = Convert.FromHexString(integrationAccessCode);
+				return aes.EncryptEcb(initializer, PaddingMode.Zeros);
+			}
+		}
 		public static (byte[] initializer, byte[]encodedKey) GenerateKeyAndType1Initializer(string integrationAccessCode)
 		{
+			if (integrationAccessCode.Length < 8) throw new ArgumentException($"integration access code is {integrationAccessCode.Length} digits long; it needs to be at least 8.");
+
 			byte[] randomBytes = RandomNumberGenerator.GetBytes(32);
 			var checkBytes = evenIndexes(randomBytes);
 			byte[] encodedKey = oddIndexes(randomBytes).ToArray();
@@ -38,11 +54,15 @@ namespace DSC.TLink.ITv2
 		/// Calculate the remote AES key for Type 1 encryption
 		/// </summary>
 		/// <param name="integrationIdentificationNumber">12 digit Integration Identification Number [851][422]</param>
-		/// <param name="remoteInitializer">The command payload sent by the panel with command 0x060E Connection_Request_Access</param>
+		/// <param name="remoteInitializer">The 48byte command payload sent by the panel with command 0x060E Connection_Request_Access</param>
 		/// <returns>The AES key used to decrypt messages from the panel</returns>
 		/// <exception cref="Exception"></exception>
 		public static byte[] ParseType1Initializer(string integrationIdentificationNumber, byte[] remoteInitializer)
 		{
+			//integrationIdentificationNumber is 12 digits long, but we only need the first 8 so that is all we check for.
+			if (integrationIdentificationNumber.Length < 8) throw new ArgumentException($"integration access code is {integrationIdentificationNumber.Length} digits long; it needs to be at least 8, and should be 12.");
+			if (remoteInitializer.Length != 48) throw new ArgumentException(nameof(remoteInitializer));
+
 			var checkBytes = remoteInitializer.Take(16);
 			var cipherText = remoteInitializer.Skip(16).Take(32).ToArray();
 

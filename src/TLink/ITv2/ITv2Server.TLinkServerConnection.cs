@@ -45,7 +45,7 @@ namespace DSC.TLink.ITv2
 			itv2Session = new ITv2Session(tlinkClient, loggerFactory.CreateLogger<ITv2Session>());
 
 			var openSession = await itv2Session.readMessage<OpenSessionMessage>();
-			await itv2Session.sendMessage(ITv2Command.Command_Response);
+			await itv2Session.sendMessage(ITv2Command.Command_Response, new CommandResponse());
 			var one = await itv2Session.readMessage<ITv2Header>();
 
 			await itv2Session.sendMessage(ITv2Command.Connection_Open_Session, openSession);
@@ -54,16 +54,20 @@ namespace DSC.TLink.ITv2
 
 			var three = await itv2Session.readMessage<RequestAccess>();
 
-			byte[] transmitKey = ITv2AES.ParseType1Initializer("200328900112", three.Payload);
+			//byte[] transmitKey = ITv2AES.ParseType1Initializer("200328900112", three.Payload);
+			byte[] transmitKey = ITv2AES.Type2InitializerTransform("12345678123456781234567812345678", three.Payload);
 
 			itv2Session.EnableSendAES(transmitKey);
 
-			await itv2Session.sendMessage(ITv2Command.Command_Response);
+			await itv2Session.sendMessage(ITv2Command.Command_Response, new CommandResponse());
 			var four = await itv2Session.readMessage<ITv2Header>();
 
 
 
-			(byte[] initializer, byte[] receivingKey) = ITv2AES.GenerateKeyAndType1Initializer("12345678");
+			//(byte[] initializer, byte[] receivingKey) = ITv2AES.GenerateKeyAndType1Initializer("12345678");
+			
+			byte[] initializer = ITv2AES.GetRandomKey();
+			byte[] receivingKey = ITv2AES.Type2InitializerTransform("12345678123456781234567812345678", initializer);
 			var requestAccess = new RequestAccess()
 			{
 				Payload = initializer

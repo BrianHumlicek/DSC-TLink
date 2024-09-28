@@ -23,27 +23,28 @@ namespace DSC.TLink
 	{
 		ILoggerFactory loggerFactory;
 		ILogger log;
-		ITlinkServerConnection serverConnection;
+		ITlinkServerConnection tLinkServer;
 		public ITv2ConnectionHandler(ITlinkServerConnection tLinkServerConnection, ILoggerFactory loggerFactory)
 		{
 			this.loggerFactory = loggerFactory;
 			this.log = loggerFactory.CreateLogger<ITv2ConnectionHandler>();
-			serverConnection = tLinkServerConnection;
+			tLinkServer = tLinkServerConnection;
 		}
 		public async override Task OnConnectedAsync(ConnectionContext connection)
 		{
+			log.LogInformation($"Connection request from {connection.RemoteEndPoint}");
 			try
 			{
 				TLinkClient tlinkClient = new TLinkClient(connection.Transport, loggerFactory.CreateLogger<TLinkClient>());
-				if (!await serverConnection.TryInitializeConnection(tlinkClient))
+				if (!await tLinkServer.TryInitializeConnection(tlinkClient))
 				{
 					log.LogWarning("Unable to serve connection request from {RemoteEndPoint}", connection.RemoteEndPoint);
 					return;
 				}
 				log.LogInformation("TLink connected to {RemoteEndPoint}", connection.RemoteEndPoint);
-				while (serverConnection.Active)
+				while (tLinkServer.Active)
 				{
-					await serverConnection.ReceiveCommand();
+					await tLinkServer.ReceiveCommand();
 				}
 			}
 			catch (Exception ex)
@@ -54,7 +55,7 @@ namespace DSC.TLink
 			{
 				try
 				{
-					serverConnection.EnsureServerConnectionReset();
+					tLinkServer.EnsureServerConnectionReset();
 				}
 				catch (Exception ex)
 				{

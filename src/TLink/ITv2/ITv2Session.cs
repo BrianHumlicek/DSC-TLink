@@ -114,7 +114,6 @@ namespace DSC.TLink.ITv2
 			};
 
 			if (message != null) header.CommandData = message.ToByteArray();
-			else if (command == ITv2Command.Command_Response) header.CommandData = [0x00];
 
 			if (sendAESActive)
 			{
