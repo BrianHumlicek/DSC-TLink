@@ -18,6 +18,21 @@ The HS2032 panel was installed by my builder and seems to be a common consumer/b
 
 The TL280RE was purchased and installed by myself for the sole purpose of experimenting.  I believe this is also what would be installed if you have a monitoring service like Alarm.com, so I think this is also a fairly common component.  The TL280 comes in a variety of flavors including cellular enabled models indicated by the suffix letters of the model number.  Mine is an RE model, which indicates serial and ethernet interfaces.  I chose this configuration as I thought it would provide the most surface area to experiment with.  So far, I am only using the ethernet interface, so you don't already have a communicator card, and want to duplicate my results, you could probably save a few bucks by purchasing the TL280E which is the ethernet only model.  For reference, these cards retail in the $200ish USD range.
 
+## TL280 Setup Steps
+
+1. Connect the TL-280 to the alarm panel with the included wire, and connect it to an ethernet cable.
+2. Enter [*][8][installer code][382] and set option 5 to ON. Press # to move back up to the configuration menu.
+3. Enter [300]. For subsections [001] to [004], program the subsection 02 to 06.
+4. Enter [*][8][installer code][851] on an alarm keypad to access configuration sections for the communicator. All following instructions will enter section numbers for each configuration option.
+5. Ensure that [021] is not set to 000000 or FFFFFF.
+6. Ensure that [101] is not set to 000000 or FFFFFF.
+7. Set [103] to the IP address of the system that the alarm will communicating with.
+8. Set [425] to 3 and 5.
+9. Set [426] to 3.
+10. Set [428] to the IP address of the system that the alarm will communicating with.
+11. Set [429] to 0C00.
+12. Set [711] to 00000078.
+
 ## What is known so far (Jan-2024)
 
 I have seen that it is possible to communicate with the alarm panel over the local network through the TL280 and see the status of the various zones as well as programming and configuration using the DLS5 software tool.  I believe that control of the arming and disarming is also possible, but I havent actually seen that yet. Seeing this was enough confirmation to make the investment of figuring out how to do this myself.
