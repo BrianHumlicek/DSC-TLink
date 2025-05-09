@@ -27,7 +27,7 @@ The TL280RE was purchased and installed by myself for the sole purpose of experi
 5. Ensure that [021] is not set to 000000 or FFFFFF.
 6. Ensure that [101] is not set to 000000 or FFFFFF.
 7. Set [103] to the IP address of the system that the alarm will communicating with.
-8. Set [425] to 3 and 5.
+8. Set [425] to 3, 4, and 5.
 9. Set [426] to 3.
 10. Set [428] to the IP address of the system that the alarm will communicating with.
 11. Set [429] to 0C00.
