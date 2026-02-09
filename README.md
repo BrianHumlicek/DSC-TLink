@@ -2,12 +2,6 @@
 
  _Integrate with DSC Powerseries Neo alarm panel over your local network_
 
-## Goal
-
-This project is an attempt at communicating with a DSC Neo series alarm panel through a DSC TL280(R)E communicator.  Ultimately, if I get the communication figured out, I want to use this information to create an integration for Home Assistant.
-
-I would like to find collaborators that are either familier with Home Assistant integrations or other DSC integrations.  I know DSC has been around a long time, and I have seen several projects to communicate with older DSC hardware in various ways.  I suspect that once I get past the encryption the underlying protocol might be similar to something that is already exists.  If that proves to be true, then working with someone that is familier with 'how DSC does things' would be helpful.
-
 ## Hardware
 
 My setup consists of the following hardware:
@@ -18,20 +12,70 @@ The HS2032 panel was installed by my builder and seems to be a common consumer/b
 
 The TL280RE was purchased and installed by myself for the sole purpose of experimenting.  I believe this is also what would be installed if you have a monitoring service like Alarm.com, so I think this is also a fairly common component.  The TL280 comes in a variety of flavors including cellular enabled models indicated by the suffix letters of the model number.  Mine is an RE model, which indicates serial and ethernet interfaces.  I chose this configuration as I thought it would provide the most surface area to experiment with.  So far, I am only using the ethernet interface, so you don't already have a communicator card, and want to duplicate my results, you could probably save a few bucks by purchasing the TL280E which is the ethernet only model.  For reference, these cards retail in the $200ish USD range.
 
-## TL280 Setup Steps
 
-1. Connect the TL-280 to the alarm panel with the included wire, and connect it to an ethernet cable.
-2. Enter [*][8][installer code][382] and set option 5 to ON. Press # to move back up to the configuration menu.
-3. Enter [300]. For subsections [001] to [004], program the subsection 02 to 06.
-4. Enter [*][8][installer code][851] on an alarm keypad to access configuration sections for the communicator. All following instructions will enter section numbers for each configuration option.
-5. Ensure that [021] is not set to 000000 or FFFFFF.
-6. Ensure that [101] is not set to 000000 or FFFFFF.
-7. Set [103] to the IP address of the system that the alarm will communicating with.
-8. Set [425] to 3, 4, and 5.
-9. Set [426] to 3.
-10. Set [428] to the IP address of the system that the alarm will communicating with.
-11. Set [429] to 0C00.
-12. Set [711] to 00000078.
+## Integration Setup Guide
+
+### Prerequisites
+
+- **.NET 8 SDK** installed on your machine ([download](https://dot.net/download))
+- The **installer code** for your DSC panel (default is 5555 or 5555 or 1234 or CAFE, but may have been changed by your installer)
+- **DLS5** software (optional, but makes configuration easier) — available from [DSC's documentation site](https://docs.johnsoncontrols.com/dsc/search/all?content-lang=en-US)
+- Your computer and the TL280 must be on the **same local network** (or reachable via routing/VPN)
+
+### Step 1: Build and Run the Server
+
+```bash
+cd src
+dotnet restore "DSC TLink.sln"
+dotnet build "DSC TLink.sln"
+dotnet run --project Demo/Demo.csproj -- <integrationId10char> <32charhexencryptionKeyfrom*8[installercode][851][701]>
+```
+
+The server will start listening on TCP port 3072 (Integration Notification port). Press Ctrl+C to stop.
+
+### Step 2: Configure the TL280 for Integration
+
+The TL280 needs to be configured to connect to your server. This can be done either via DLS5 software or directly on the panel keypad.
+
+#### Option A: Via DLS5 Software
+
+Navigate to **Integration Options** > **Session 1 Integration Opt** and configure the following:
+
+![DLS5 Integration Session Configuration](docs/images/dls5_integration_session.png)
+
+| Section | Setting | Value |
+|---------|---------|-------|
+| `[851][450]` | Type 1 Integration Access Code | Your access code (e.g. `12345678`) |
+| `[851][701]` | Type 2 Integration Access Code | Your 32-char hex key |
+| `[851][452]-4` | Integration Encryption Type | `Type 2` |
+| `[851][452]` | Interactive Configuration | `Integration Over Ethernet` |
+| `[851][453]-3` | Real-Time Notification Enabled | `Yes` |
+| `[851][453]-4` | Notification Port Selection | `Notification Port` |
+| `[851][455]` | Integration Server IP | IP address of your server |
+| `[851][456]` | Integration Notification Port | `3072` (default, matches the demo app) |
+
+#### Option B: Via Panel Keypad
+
+Enter `[*][8][installer code][851]` on the keypad to access communicator configuration, then program each section:
+
+1. `[450]` — Set the Type 1 Integration Access Code
+2. `[701]` — Set the Type 2 Integration Access Code (32-character hex key)
+3. `[452]` — Set Integration Encryption Type to Type 2 (toggle option 4)
+4. `[452]` — Set Interactive Configuration to Integration Over Ethernet
+5. `[453]` — Enable Real-Time Notification (toggle option 3), set Notification Port Selection to Notification Port (toggle option 4)
+6. `[455]` — Enter the IP address of the machine running the server
+7. `[456]` — Set to `0C00` (hex for port 3072)
+
+### Step 3: Update the Server Configuration
+
+Edit `src/TLink/ITv2/ITv2Server.TLinkServerConnection.cs` and update the following values to match your panel configuration:
+
+- **`integrationId`** — Your integration account ID
+- **Type 2 encryption key** — The 32-character hex key matching `[851][701]` on your panel
+
+### Step 4: Verify the Connection
+
+After starting the server and configuring the TL280, the panel should connect and you will see the ITv2 handshake in the console logs. Once connected, incoming notifications (zone status, arming/disarming events, trouble conditions, etc.) will be printed to the console with their decoded command type and data.
 
 ## What is known so far (Jan-2024)
 

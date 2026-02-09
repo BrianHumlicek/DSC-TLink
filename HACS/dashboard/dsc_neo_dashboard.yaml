@@ -1,0 +1,124 @@
+title: DSC Neo Alarm
+views:
+  - title: Security
+    path: security
+    icon: mdi:shield-home
+    type: sections
+    sections:
+      # ── Alarm Status ──
+      - type: grid
+        title: Alarm Control
+        column_span: 4
+        cards:
+          - type: tile
+            entity: alarm_control_panel.dsc_neo_alarm_panel_partition_1
+            name: Partition 1
+            icon: mdi:shield-home
+            features:
+              - type: alarm-modes
+                modes:
+                  - armed_home
+                  - armed_away
+                  - armed_night
+                  - disarmed
+            layout_options:
+              grid_columns: 4
+              grid_rows: 3
+
+      # ── Zone Status ──
+      - type: grid
+        title: Zones
+        column_span: 4
+        cards:
+          - type: entity
+            entity: binary_sensor.dsc_neo_alarm_panel_zone_1
+            name: Zone 1
+            icon: mdi:door
+            state_color: true
+          - type: entity
+            entity: binary_sensor.dsc_neo_alarm_panel_zone_2
+            name: Zone 2
+            icon: mdi:door
+            state_color: true
+          - type: entity
+            entity: binary_sensor.dsc_neo_alarm_panel_zone_3
+            name: Zone 3
+            icon: mdi:door
+            state_color: true
+          - type: entity
+            entity: binary_sensor.dsc_neo_alarm_panel_zone_4
+            name: Zone 4
+            icon: mdi:door
+            state_color: true
+          - type: entity
+            entity: binary_sensor.dsc_neo_alarm_panel_zone_5
+            name: Zone 5
+            icon: mdi:door
+            state_color: true
+          - type: entity
+            entity: binary_sensor.dsc_neo_alarm_panel_zone_6
+            name: Zone 6
+            icon: mdi:door
+            state_color: true
+          - type: entity
+            entity: binary_sensor.dsc_neo_alarm_panel_zone_7
+            name: Zone 7
+            icon: mdi:door
+            state_color: true
+          - type: entity
+            entity: binary_sensor.dsc_neo_alarm_panel_zone_8
+            name: Zone 8
+            icon: mdi:door
+            state_color: true
+
+      # ── Zone History ──
+      - type: grid
+        title: Recent Zone Activity
+        column_span: 4
+        cards:
+          - type: history-graph
+            hours_to_show: 24
+            entities:
+              - entity: binary_sensor.dsc_neo_alarm_panel_zone_1
+                name: Zone 1
+              - entity: binary_sensor.dsc_neo_alarm_panel_zone_2
+                name: Zone 2
+              - entity: binary_sensor.dsc_neo_alarm_panel_zone_3
+                name: Zone 3
+              - entity: binary_sensor.dsc_neo_alarm_panel_zone_4
+                name: Zone 4
+              - entity: binary_sensor.dsc_neo_alarm_panel_zone_5
+                name: Zone 5
+              - entity: binary_sensor.dsc_neo_alarm_panel_zone_6
+                name: Zone 6
+              - entity: binary_sensor.dsc_neo_alarm_panel_zone_7
+                name: Zone 7
+              - entity: binary_sensor.dsc_neo_alarm_panel_zone_8
+                name: Zone 8
+            layout_options:
+              grid_columns: 4
+              grid_rows: 4
+
+      # ── Partition Details ──
+      - type: grid
+        title: Partition Details
+        column_span: 4
+        cards:
+          - type: entities
+            title: Partition 1 Attributes
+            entities:
+              - entity: alarm_control_panel.dsc_neo_alarm_panel_partition_1
+                type: attribute
+                attribute: ready
+                name: Ready
+                icon: mdi:check-circle
+              - entity: alarm_control_panel.dsc_neo_alarm_panel_partition_1
+                type: attribute
+                attribute: exit_delay_seconds
+                name: Exit Delay
+                icon: mdi:timer-outline
+              - entity: alarm_control_panel.dsc_neo_alarm_panel_partition_1
+                type: attribute
+                attribute: entry_delay_seconds
+                name: Entry Delay
+                icon: mdi:timer-alert-outline

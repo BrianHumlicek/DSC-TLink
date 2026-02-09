@@ -29,11 +29,10 @@ namespace DSC.TLink.Demo
 			ServiceProvider.shutdownTokenGetter = () => shutdownToken;
 		}
 		internal  MockServiceProvider ServiceProvider { get; } = new MockServiceProvider();
-		CancellationTokenSource? cancellationTokenSource;
-		public CancellationToken shutdownToken => cancellationTokenSource?.Token ?? CancellationToken.None;
+		CancellationTokenSource cancellationTokenSource = new CancellationTokenSource();
+		public CancellationToken shutdownToken => cancellationTokenSource.Token;
 		public async Task TcpListenUntilStopped(int port)
 		{
-			cancellationTokenSource = new CancellationTokenSource();
 			await TcpListen(port);
 		}
 		public async Task TcpListen(int port)
