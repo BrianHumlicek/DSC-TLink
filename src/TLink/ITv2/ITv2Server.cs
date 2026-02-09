@@ -14,6 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+using DSC.TLink.Relay;
 using Microsoft.Extensions.Logging;
 
 namespace DSC.TLink.ITv2
@@ -23,11 +24,17 @@ namespace DSC.TLink.ITv2
 		ILoggerFactory loggerFactory;
 		ILogger log;
 		CancellationToken shutdownToken;
-		public ITv2Server(ILoggerFactory loggerFactory, CancellationToken shutdownToken)
+		JsonRelay? relay;
+		public string IntegrationId { get; }
+		public string EncryptionKey { get; }
+		public ITv2Server(ILoggerFactory loggerFactory, CancellationToken shutdownToken, string integrationId, string encryptionKey, JsonRelay? relay = null)
 		{
 			this.loggerFactory = loggerFactory;
 			this.shutdownToken = shutdownToken;
 			this.log = loggerFactory.CreateLogger<ITv2Server>();
+			IntegrationId = integrationId;
+			EncryptionKey = encryptionKey;
+			this.relay = relay;
 		}
 	}
 }
