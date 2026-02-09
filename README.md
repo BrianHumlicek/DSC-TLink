@@ -2,6 +2,8 @@
 
  _Integrate with DSC Powerseries Neo alarm panel over your local network_
 
+**Repository:** [https://github.com/Z6543/DSC-TLink](https://github.com/Z6543/DSC-TLink)
+
 ## Hardware
 
 My setup consists of the following hardware:
@@ -28,10 +30,23 @@ The TL280RE was purchased and installed by myself for the sole purpose of experi
 cd src
 dotnet restore "DSC TLink.sln"
 dotnet build "DSC TLink.sln"
-dotnet run --project Demo/Demo.csproj -- <integrationId10char> <32charhexencryptionKeyfrom*8[installercode][851][701]>
+dotnet run --project Demo/Demo.csproj -- <integrationId> <encryptionKey> --relay-port 3078
 ```
 
-The server will start listening on TCP port 3072 (Integration Notification port). Press Ctrl+C to stop.
+- `<integrationId>` — 10-character integration account ID
+- `<encryptionKey>` — 32-character hex key from `*8[installer code][851][701]`
+
+The server will start listening on TCP port 3072 (panel connection) and port 3078 (JSON relay for Home Assistant). Press Ctrl+C to stop.
+
+**Additional CLI options:**
+
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--port <port>` | `3072` | Panel listener port |
+| `--relay-port <port>` | `3078` | JSON relay port for Home Assistant |
+| `--relay-ip <address>` | `0.0.0.0` | Bind address for the relay (all interfaces) |
+| `--debug` | off | Enable debug-level logging |
+| `--trace` | off | Enable trace-level logging (most verbose) |
 
 ### Step 2: Configure the TL280 for Integration
 
@@ -66,16 +81,65 @@ Enter `[*][8][installer code][851]` on the keypad to access communicator configu
 6. `[455]` — Enter the IP address of the machine running the server
 7. `[456]` — Set to `0C00` (hex for port 3072)
 
-### Step 3: Update the Server Configuration
-
-Edit `src/TLink/ITv2/ITv2Server.TLinkServerConnection.cs` and update the following values to match your panel configuration:
-
-- **`integrationId`** — Your integration account ID
-- **Type 2 encryption key** — The 32-character hex key matching `[851][701]` on your panel
-
-### Step 4: Verify the Connection
+### Step 3: Verify the Connection
 
 After starting the server and configuring the TL280, the panel should connect and you will see the ITv2 handshake in the console logs. Once connected, incoming notifications (zone status, arming/disarming events, trouble conditions, etc.) will be printed to the console with their decoded command type and data.
+
+### Step 4: Install the Home Assistant Integration
+
+The project includes a custom Home Assistant integration that receives real-time panel updates via the JSON relay.
+
+**Architecture:**
+```
+TL280 Panel ──TCP:3072──▶ C# Server ──TCP:3078──▶ Home Assistant
+                          (decode)    (JSON relay)  (entities)
+```
+
+#### 4a. Copy the integration files to Home Assistant
+
+```bash
+scp -r HACS/custom_components/dsc_neo/ user@HA_IP:/config/custom_components/dsc_neo/
+```
+
+Replace `user` with your HA username (often `root` for HAOS) and `HA_IP` with your Home Assistant IP.
+
+> **Alternative:** If you have the Samba add-on, mount the HA share via Finder/Explorer and copy the `dsc_neo` folder into `config/custom_components/`.
+
+#### 4b. Restart Home Assistant
+
+Go to **Settings → System → Restart**.
+
+#### 4c. Add the integration
+
+1. Go to **Settings → Devices & Services → Add Integration**
+2. Search for **DSC Neo**
+3. Enter the IP address of the machine running the C# server
+4. Enter the relay port (default `3078`)
+
+The integration will test the connection before saving. Make sure the C# server is running with `--relay-port 3078` and that port 3078 is accessible from the HA machine (check firewall rules if needed).
+
+> **Note:** Zone and partition entities are auto-discovered — they will appear as soon as the panel reports zone status or arming events. Open/close a door or arm/disarm from the keypad to trigger initial entity creation.
+
+### Step 5: Import the Dashboard
+
+A pre-built security dashboard is included in the repository.
+
+1. Go to **Settings → Dashboards → Add Dashboard**
+2. Name it (e.g., "DSC Neo Alarm"), pick an icon, and save
+3. Open the new dashboard → click the 3 dots (⋮) → **Edit Dashboard**
+4. Click the 3 dots again → **Raw configuration editor**
+5. Paste the contents of [`HACS/dashboard/dsc_neo_dashboard.yaml`](https://github.com/Z6543/DSC-TLink/blob/main/HACS/dashboard/dsc_neo_dashboard.yaml)
+6. Save
+
+The dashboard includes:
+- **Alarm Control** — partition tile with arm/disarm/home/night/away mode display
+- **Zones** — 8 zone cards with color-coded open/closed state
+- **Recent Zone Activity** — 24-hour history graph
+- **Partition Details** — ready status, exit delay, and entry delay
+
+![HA Dashboard](docs/images/HA_dashboard.png)
+
+> **Tip:** After setup, rename zones to friendly names (e.g., "Front Door", "Living Room Motion") by editing the entities in the HA UI. Entity IDs use the `dsc_neo_alarm_panel_` prefix (e.g., `binary_sensor.dsc_neo_alarm_panel_zone_1`).
 
 ## What is known so far (Jan-2024)
 
@@ -83,6 +147,4 @@ I have seen that it is possible to communicate with the alarm panel over the loc
 
 The communication begins by opening a TCP connection with the TL280 on port 3062.  The TL280 will immedietly send a packet of 56 bytes that eventually can be parsed into information about the alarm panel such as device ID, software revision, and several other fields that may or may not be interesting.  From this point on, all communications are encrypted using an AES ECB block cipher.  The key for the cipher is a mashup of data that is sent in the initial data packet from the TL280.  So far, the project can connect and parse this data.  I have verified that I can generate the correct key and successfuly decode the AES cipher.
 
-## Update (Aug-2024)
-I have expanded the functionality the the TLink Client as well as made progress in figuring out more pieces of the communication.  At this time, it appears that what I am working with is DLS specific and I may need to pivot to the ITV2 interface.
-I also have added a [References](References.md) section that has some useful manufacturer documentation.
+
