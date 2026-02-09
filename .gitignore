@@ -362,3 +362,8 @@ MigrationBackup/
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
 /ITv2_Integration_Options.txt
+
+# macOS specific files
+.DS_Store
+.AppleDouble
+.LSOverride
