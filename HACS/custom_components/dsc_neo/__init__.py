@@ -50,6 +50,7 @@ class DscNeoCoordinator:
         self.port = port
         self._task: asyncio.Task | None = None
         self._running = False
+        self._writer: asyncio.StreamWriter | None = None
         self.zones: dict[int, bool] = {}
         self.partitions: dict[int, dict] = {}
         self.connected = False
@@ -76,6 +77,7 @@ class DscNeoCoordinator:
                 reader, writer = await asyncio.wait_for(
                     asyncio.open_connection(self.host, self.port), timeout=10
                 )
+                self._writer = writer
                 self.connected = True
                 _LOGGER.info(
                     "Connected to DSC Neo relay at %s:%s", self.host, self.port
@@ -97,6 +99,7 @@ class DscNeoCoordinator:
                     _LOGGER.exception("Error reading from relay")
                 finally:
                     self.connected = False
+                    self._writer = None
                     writer.close()
                     try:
                         await writer.wait_closed()
@@ -184,3 +187,17 @@ class DscNeoCoordinator:
 
         elif msg_type == "heartbeat":
             pass
+
+    async def send_command(self, command: dict) -> None:
+        """Send a JSON command line to the relay server."""
+        writer = self._writer
+        if writer is None or writer.is_closing():
+            _LOGGER.warning("Cannot send command — not connected to relay")
+            return
+        try:
+            line = json.dumps(command) + "\n"
+            writer.write(line.encode())
+            await writer.drain()
+            _LOGGER.debug("Sent command to relay: %s", command)
+        except (OSError, ConnectionError) as exc:
+            _LOGGER.error("Failed to send command to relay: %s", exc)

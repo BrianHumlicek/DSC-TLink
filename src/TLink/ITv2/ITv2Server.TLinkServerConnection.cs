@@ -16,6 +16,7 @@
 
 using DSC.TLink.ITv2.Enumerations;
 using DSC.TLink.ITv2.Messages;
+using DSC.TLink.Relay;
 using Microsoft.Extensions.Logging;
 using System.Text;
 
@@ -57,6 +58,51 @@ namespace DSC.TLink.ITv2
 			}
 
 			await itv2Session.SendSimpleAck();
+
+			// Process any pending commands from relay clients
+			await ProcessPendingCommands();
+		}
+
+		async Task ProcessPendingCommands()
+		{
+			if (relay == null) return;
+
+			IITV2ServerAPI api = this;
+			while (relay.PendingCommands.TryDequeue(out var command))
+			{
+				try
+				{
+					byte partition = (byte)command.Partition;
+					if (string.IsNullOrEmpty(command.Code))
+					{
+						log.LogWarning("Command {Type} requires an access code", command.Type);
+						break;
+					}
+					switch (command.Type.ToLowerInvariant())
+					{
+						case "arm_away":
+							await api.ArmAway(partition, command.Code);
+							break;
+						case "arm_home":
+						case "arm_stay":
+							await api.ArmStay(partition, command.Code);
+							break;
+						case "arm_night":
+							await api.ArmNight(partition, command.Code);
+							break;
+						case "disarm":
+							await api.Disarm(partition, command.Code);
+							break;
+						default:
+							log.LogWarning("Unknown relay command type: {Type}", command.Type);
+							break;
+					}
+				}
+				catch (Exception ex)
+				{
+					log.LogError(ex, "Error processing relay command: {Type}", command.Type);
+				}
+			}
 		}
 
 		void LogCommand(ITv2Header header)

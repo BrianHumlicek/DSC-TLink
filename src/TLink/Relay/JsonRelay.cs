@@ -22,6 +22,13 @@ using System.Text.Json;
 
 namespace DSC.TLink.Relay
 {
+	public class RelayCommand
+	{
+		public string Type { get; set; } = "";
+		public int Partition { get; set; } = 1;
+		public string? Code { get; set; }
+	}
+
 	public class JsonRelay : IDisposable
 	{
 		readonly ILogger log;
@@ -29,6 +36,12 @@ namespace DSC.TLink.Relay
 		readonly ConcurrentDictionary<string, (TcpClient client, StreamWriter writer)> clients = new();
 		TcpListener? listener;
 		int clientIdCounter;
+
+		/// <summary>
+		/// Commands received from relay clients (Home Assistant) waiting to be
+		/// dispatched to the panel.
+		/// </summary>
+		public ConcurrentQueue<RelayCommand> PendingCommands { get; } = new();
 
 		public JsonRelay(ILoggerFactory loggerFactory, CancellationToken shutdownToken)
 		{
@@ -43,15 +56,22 @@ namespace DSC.TLink.Relay
 			listener.Start();
 			log.LogInformation("JSON relay listening on {Address}:{Port}", bindAddress, port);
 
+			_ = Task.Run(() => HeartbeatLoop(), shutdownToken);
+
 			try
 			{
 				while (!shutdownToken.IsCancellationRequested)
 				{
 					TcpClient tcpClient = await listener.AcceptTcpClientAsync(shutdownToken);
 					string clientId = $"relay-{Interlocked.Increment(ref clientIdCounter)}";
-					var writer = new StreamWriter(tcpClient.GetStream()) { AutoFlush = true };
+					var stream = tcpClient.GetStream();
+					var writer = new StreamWriter(stream) { AutoFlush = true };
+					var reader = new StreamReader(stream);
 					clients[clientId] = (tcpClient, writer);
 					log.LogInformation("Relay client connected: {ClientId} from {RemoteEndPoint}", clientId, tcpClient.Client.RemoteEndPoint);
+
+					// Start background reader for commands from this client
+					_ = Task.Run(() => ClientReadLoop(clientId, reader), shutdownToken);
 				}
 			}
 			catch (OperationCanceledException)
@@ -67,6 +87,56 @@ namespace DSC.TLink.Relay
 					try { client.Dispose(); } catch { }
 				}
 				clients.Clear();
+			}
+		}
+
+		async Task ClientReadLoop(string clientId, StreamReader reader)
+		{
+			try
+			{
+				while (!shutdownToken.IsCancellationRequested)
+				{
+					string? line = await reader.ReadLineAsync();
+					if (line == null)
+					{
+						log.LogDebug("Relay client {ClientId} disconnected (EOF)", clientId);
+						break;
+					}
+
+					line = line.Trim();
+					if (string.IsNullOrEmpty(line)) continue;
+
+					try
+					{
+						var command = JsonSerializer.Deserialize<RelayCommand>(line, new JsonSerializerOptions
+						{
+							PropertyNameCaseInsensitive = true
+						});
+
+						if (command != null && !string.IsNullOrEmpty(command.Type))
+						{
+							log.LogInformation("Received command from {ClientId}: {Type} partition={Partition}",
+								clientId, command.Type, command.Partition);
+							PendingCommands.Enqueue(command);
+						}
+						else
+						{
+							log.LogDebug("Ignoring empty/invalid command from {ClientId}: {Line}", clientId, line);
+						}
+					}
+					catch (JsonException ex)
+					{
+						log.LogDebug("Invalid JSON command from {ClientId}: {Line} ({Error})", clientId, line, ex.Message);
+					}
+				}
+			}
+			catch (Exception ex) when (ex is not OperationCanceledException)
+			{
+				log.LogDebug("Relay client {ClientId} read error: {Error}", clientId, ex.Message);
+			}
+			finally
+			{
+				RemoveClient(clientId);
 			}
 		}
 
@@ -93,6 +163,15 @@ namespace DSC.TLink.Relay
 					log.LogDebug("Relay client disconnected: {ClientId}", id);
 					RemoveClient(id);
 				}
+			}
+		}
+
+		async Task HeartbeatLoop()
+		{
+			while (!shutdownToken.IsCancellationRequested)
+			{
+				await Task.Delay(TimeSpan.FromSeconds(60), shutdownToken);
+				Broadcast(new { type = "heartbeat" });
 			}
 		}
 

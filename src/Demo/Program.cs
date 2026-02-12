@@ -70,7 +70,10 @@ namespace DSC.TLink.Demo
 			server.ServiceProvider.LogFactory = LoggerFactory.Create((configure) =>
 			{
 				configure.AddProvider(new TextFileLoggerProvider());
-				configure.AddConsole();
+				configure.AddSimpleConsole(options =>
+				{
+					options.TimestampFormat = "yyyy-MM-dd HH:mm:ss ";
+				});
 				configure.SetMinimumLevel(logLevel);
 			});
 

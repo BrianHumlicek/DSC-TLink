@@ -6,7 +6,9 @@ import logging
 
 from homeassistant.components.alarm_control_panel import (
     AlarmControlPanelEntity,
+    AlarmControlPanelEntityFeature,
     AlarmControlPanelState,
+    CodeFormat,
 )
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, callback
@@ -61,8 +63,13 @@ class DscNeoAlarmPanel(AlarmControlPanelEntity):
     """Represents a DSC Neo partition as an alarm control panel."""
 
     _attr_has_entity_name = True
-    _attr_supported_features = 0  # Read-only for now
-    _attr_code_arm_required = False
+    _attr_supported_features = (
+        AlarmControlPanelEntityFeature.ARM_HOME
+        | AlarmControlPanelEntityFeature.ARM_AWAY
+        | AlarmControlPanelEntityFeature.ARM_NIGHT
+    )
+    _attr_code_arm_required = True
+    _attr_code_format = CodeFormat.NUMBER
 
     def __init__(
         self, coordinator, partition: int, entry_id: str
@@ -110,6 +117,42 @@ class DscNeoAlarmPanel(AlarmControlPanelEntity):
                 f"{DOMAIN}_partition_update",
                 self._handle_update,
             )
+        )
+
+    async def async_alarm_arm_away(self, code: str | None = None) -> None:
+        """Send arm away command."""
+        if not code:
+            _LOGGER.warning("Arm away requires an access code")
+            return
+        await self._coordinator.send_command(
+            {"type": "arm_away", "partition": self._partition, "code": code}
+        )
+
+    async def async_alarm_arm_home(self, code: str | None = None) -> None:
+        """Send arm home (stay) command."""
+        if not code:
+            _LOGGER.warning("Arm home requires an access code")
+            return
+        await self._coordinator.send_command(
+            {"type": "arm_home", "partition": self._partition, "code": code}
+        )
+
+    async def async_alarm_arm_night(self, code: str | None = None) -> None:
+        """Send arm night (zero entry delay) command."""
+        if not code:
+            _LOGGER.warning("Arm night requires an access code")
+            return
+        await self._coordinator.send_command(
+            {"type": "arm_night", "partition": self._partition, "code": code}
+        )
+
+    async def async_alarm_disarm(self, code: str | None = None) -> None:
+        """Send disarm command with access code."""
+        if not code:
+            _LOGGER.warning("Disarm requires an access code")
+            return
+        await self._coordinator.send_command(
+            {"type": "disarm", "partition": self._partition, "code": code}
         )
 
     @callback
