@@ -24,6 +24,7 @@ STATE_MAP = {
     "disarmed": AlarmControlPanelState.DISARMED,
     "armed_away": AlarmControlPanelState.ARMED_AWAY,
     "armed_home": AlarmControlPanelState.ARMED_HOME,
+    "armed_night": AlarmControlPanelState.ARMED_NIGHT,
     "arming": AlarmControlPanelState.ARMING,
     "pending": AlarmControlPanelState.PENDING,
 }
@@ -63,11 +64,7 @@ class DscNeoAlarmPanel(AlarmControlPanelEntity):
     """Represents a DSC Neo partition as an alarm control panel."""
 
     _attr_has_entity_name = True
-    _attr_supported_features = (
-        AlarmControlPanelEntityFeature.ARM_HOME
-        | AlarmControlPanelEntityFeature.ARM_AWAY
-        | AlarmControlPanelEntityFeature.ARM_NIGHT
-    )
+    _attr_should_poll = False
     _attr_code_arm_required = True
     _attr_code_format = CodeFormat.NUMBER
 
@@ -79,6 +76,8 @@ class DscNeoAlarmPanel(AlarmControlPanelEntity):
         self._partition = partition
         self._attr_unique_id = f"{entry_id}_partition_{partition}"
         self._attr_name = f"Partition {partition}"
+        self._alarm_state = AlarmControlPanelState.DISARMED
+        self._attr_available = coordinator.connected
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, entry_id)},
             name="DSC Neo Alarm Panel",
@@ -87,16 +86,18 @@ class DscNeoAlarmPanel(AlarmControlPanelEntity):
         )
 
     @property
-    def state(self) -> str:
-        """Return the state of the partition."""
-        pdata = self._coordinator.partitions.get(self._partition, {})
-        state = pdata.get("state", "disarmed")
-        return STATE_MAP.get(state, AlarmControlPanelState.DISARMED)
+    def supported_features(self) -> AlarmControlPanelEntityFeature:
+        """Return the list of supported features."""
+        return (
+            AlarmControlPanelEntityFeature.ARM_HOME
+            | AlarmControlPanelEntityFeature.ARM_AWAY
+            | AlarmControlPanelEntityFeature.ARM_NIGHT
+        )
 
     @property
-    def available(self) -> bool:
-        """Return true if the relay connection is active."""
-        return self._coordinator.connected
+    def alarm_state(self) -> AlarmControlPanelState | None:
+        """Return the state of the alarm."""
+        return self._alarm_state
 
     @property
     def extra_state_attributes(self) -> dict:
@@ -118,6 +119,13 @@ class DscNeoAlarmPanel(AlarmControlPanelEntity):
                 self._handle_update,
             )
         )
+        self.async_on_remove(
+            async_dispatcher_connect(
+                self.hass,
+                f"{DOMAIN}_connection_update",
+                self._handle_connection_update,
+            )
+        )
 
     async def async_alarm_arm_away(self, code: str | None = None) -> None:
         """Send arm away command."""
@@ -127,6 +135,8 @@ class DscNeoAlarmPanel(AlarmControlPanelEntity):
         await self._coordinator.send_command(
             {"type": "arm_away", "partition": self._partition, "code": code}
         )
+        self._alarm_state = AlarmControlPanelState.ARMING
+        self.async_write_ha_state()
 
     async def async_alarm_arm_home(self, code: str | None = None) -> None:
         """Send arm home (stay) command."""
@@ -136,6 +146,8 @@ class DscNeoAlarmPanel(AlarmControlPanelEntity):
         await self._coordinator.send_command(
             {"type": "arm_home", "partition": self._partition, "code": code}
         )
+        self._alarm_state = AlarmControlPanelState.ARMING
+        self.async_write_ha_state()
 
     async def async_alarm_arm_night(self, code: str | None = None) -> None:
         """Send arm night (zero entry delay) command."""
@@ -145,6 +157,8 @@ class DscNeoAlarmPanel(AlarmControlPanelEntity):
         await self._coordinator.send_command(
             {"type": "arm_night", "partition": self._partition, "code": code}
         )
+        self._alarm_state = AlarmControlPanelState.ARMING
+        self.async_write_ha_state()
 
     async def async_alarm_disarm(self, code: str | None = None) -> None:
         """Send disarm command with access code."""
@@ -154,9 +168,22 @@ class DscNeoAlarmPanel(AlarmControlPanelEntity):
         await self._coordinator.send_command(
             {"type": "disarm", "partition": self._partition, "code": code}
         )
+        self._alarm_state = AlarmControlPanelState.DISARMED
+        self.async_write_ha_state()
 
     @callback
     def _handle_update(self, partition: int) -> None:
         """Handle a partition state update."""
         if partition == self._partition:
+            pdata = self._coordinator.partitions.get(self._partition, {})
+            state = pdata.get("state", "disarmed")
+            self._alarm_state = STATE_MAP.get(
+                state, AlarmControlPanelState.DISARMED
+            )
             self.async_write_ha_state()
+
+    @callback
+    def _handle_connection_update(self) -> None:
+        """Handle relay connection state change."""
+        self._attr_available = self._coordinator.connected
+        self.async_write_ha_state()

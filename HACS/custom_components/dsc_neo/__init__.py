@@ -82,6 +82,16 @@ class DscNeoCoordinator:
                 _LOGGER.info(
                     "Connected to DSC Neo relay at %s:%s", self.host, self.port
                 )
+                async_dispatcher_send(
+                    self.hass, f"{DOMAIN}_connection_update"
+                )
+                # Ensure default partition exists so alarm panel entity
+                # is available immediately, even before the first panel event.
+                if 1 not in self.partitions:
+                    self.partitions[1] = {"state": "disarmed", "ready": False}
+                    async_dispatcher_send(
+                        self.hass, f"{DOMAIN}_new_partition", 1
+                    )
                 try:
                     while self._running:
                         line = await asyncio.wait_for(
@@ -100,6 +110,9 @@ class DscNeoCoordinator:
                 finally:
                     self.connected = False
                     self._writer = None
+                    async_dispatcher_send(
+                        self.hass, f"{DOMAIN}_connection_update"
+                    )
                     writer.close()
                     try:
                         await writer.wait_closed()

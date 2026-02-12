@@ -217,6 +217,7 @@ namespace DSC.TLink.ITv2
 						0x00 => "disarmed",
 						0x01 => "armed_home",
 						0x02 => "armed_away",
+						0x03 => "armed_night",
 						_ => $"unknown_0x{payload[1]:X2}"
 					};
 					yield return new { type = "arming", partition = (int)payload[0], state };
