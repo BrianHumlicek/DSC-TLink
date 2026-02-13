@@ -33,18 +33,21 @@ namespace DSC.TLink
 		public async override Task OnConnectedAsync(ConnectionContext connection)
 		{
 			log.LogInformation("Connection request from {RemoteEndPoint}", connection.RemoteEndPoint);
+			string phase = "pre-init";
+			int commandCount = 0;
 			try
 			{
 				log.LogDebug("Creating TLinkClient for {RemoteEndPoint}", connection.RemoteEndPoint);
 				TLinkClient tlinkClient = new TLinkClient(connection.Transport, loggerFactory.CreateLogger<TLinkClient>());
+				phase = "handshake";
 				log.LogDebug("Starting TryInitializeConnection for {RemoteEndPoint}", connection.RemoteEndPoint);
 				if (!await tLinkServer.TryInitializeConnection(tlinkClient))
 				{
 					log.LogWarning("Unable to serve connection request from {RemoteEndPoint} — initialization handshake failed", connection.RemoteEndPoint);
 					return;
 				}
+				phase = "command-loop";
 				log.LogInformation("TLink connected to {RemoteEndPoint} — entering command receive loop", connection.RemoteEndPoint);
-				int commandCount = 0;
 				while (tLinkServer.Active)
 				{
 					await tLinkServer.ReceiveCommand();
@@ -56,11 +59,16 @@ namespace DSC.TLink
 			}
 			catch (OperationCanceledException)
 			{
-				log.LogDebug("Connection to {RemoteEndPoint} cancelled (shutdown)", connection.RemoteEndPoint);
+				log.LogDebug("Connection to {RemoteEndPoint} cancelled during {Phase} (shutdown)", connection.RemoteEndPoint, phase);
+			}
+			catch (TLinkPacketException ex)
+			{
+				log.LogWarning("Panel disconnected from {RemoteEndPoint} during {Phase} (commands processed={CommandCount}): {Message}",
+					connection.RemoteEndPoint, phase, commandCount, ex.Message);
 			}
 			catch (Exception ex)
 			{
-				log.LogError(ex, "TLink server connection error with {RemoteEndPoint}: {Message}", connection.RemoteEndPoint, ex.Message);
+				log.LogError(ex, "TLink server connection error with {RemoteEndPoint} during {Phase}: {Message}", connection.RemoteEndPoint, phase, ex.Message);
 			}
 			finally
 			{

@@ -53,7 +53,7 @@ namespace DSC.TLink.ITv2
 		}
 		async Task<ITv2Header> readHeaderMessage(CancellationToken cancellationToken = default, int? timeoutMs = null)
 		{
-			log.LogDebug("readHeaderMessage: waiting for message (receiveAES={AesActive}, timeout={Timeout})", receiveAESActive, timeoutMs);
+			// log.LogDebug("readHeaderMessage: waiting for message (receiveAES={AesActive}, timeout={Timeout})", receiveAESActive, timeoutMs);
 			(_, byte[] message) = await tlinkClient.ReadMessage(cancellationToken, timeoutMs);
 			log.LogDebug("readHeaderMessage: received {Length} bytes", message.Length);
 			ITv2Header header = new ITv2Header();

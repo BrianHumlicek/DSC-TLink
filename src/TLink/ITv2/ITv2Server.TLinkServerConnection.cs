@@ -41,7 +41,7 @@ namespace DSC.TLink.ITv2
 			// With a relay, poll every 2s so commands are dispatched quickly.
 			// Without a relay, use the default long timeout (300s).
 			int? timeout = relay != null ? RelayPollTimeoutMs : null;
-			log.LogDebug("ReceiveCommand: waiting for panel message (timeout={Timeout}ms, relay={HasRelay})", timeout, relay != null);
+			// log.LogDebug("ReceiveCommand: waiting for panel message (timeout={Timeout}ms, relay={HasRelay})", timeout, relay != null);
 
 			try
 			{
@@ -72,12 +72,10 @@ namespace DSC.TLink.ITv2
 			}
 			catch (OperationCanceledException)
 			{
-				log.LogDebug("ReceiveCommand: read timed out after {Timeout}ms — checking for pending relay commands", timeout);
+				// Read timed out — check for pending commands
 			}
 
 			// Process any pending commands from relay clients
-			if (relay != null)
-				log.LogDebug("ReceiveCommand: checking pending commands (queue count={Count})", relay.PendingCommands.Count);
 			await ProcessPendingCommands();
 		}
 

@@ -28,12 +28,16 @@ namespace DSC.TLink
 		protected ILogger log;
 		CancellationToken cancellationToken;
 		private CancellationToken cts;
+		DateTime lastSendTime;
+		DateTime lastReceiveTime;
 
 		public TLinkClient(IDuplexPipe pipe, ILogger<TLinkClient> log)
 		{
 			pipeReader = pipe.Input;
 			pipeWriter = pipe.Output;
 			this.log = log;
+			lastSendTime = DateTime.UtcNow;
+			lastReceiveTime = DateTime.UtcNow;
 		}
 		public byte[] DefaultHeader { get; set; } = Array.Empty<byte>();
 
@@ -62,6 +66,7 @@ namespace DSC.TLink
 
 			log?.LogDebug("Sent     {packet}", assembledPacket);
 
+			lastSendTime = DateTime.UtcNow;
 			await sendPacket(assembledPacket);
 
 			IEnumerable<byte> stuffBytes(IEnumerable<byte> inputBytes)
@@ -101,6 +106,8 @@ namespace DSC.TLink
 			//AdvanceTo invalidates the readonly sequence that was read, so it can only be called after we are done with the sequence.
 			pipeReader.AdvanceTo(packetSequence.End);
 
+			lastReceiveTime = DateTime.UtcNow;
+
 			if (log?.IsEnabled(LogLevel.Trace) ?? false)
 			{
 				log?.LogTrace("Received header '{header}'", message.header);
@@ -113,7 +120,7 @@ namespace DSC.TLink
 		async Task<ReadOnlySequence<byte>> readPacket(CancellationToken externalToken = default, int? timeoutMs = null)
 		{
 			int timeout = timeoutMs ?? 300000;
-			log?.LogDebug("readPacket: waiting for data (timeout={Timeout}ms)", timeout);
+			// log?.LogDebug("readPacket: waiting for data (timeout={Timeout}ms)", timeout);
 			using (CancellationTokenSource timeoutCts = new CancellationTokenSource(TimeSpan.FromMilliseconds(timeout)))
 			using (CancellationTokenSource linkedCts = CancellationTokenSource.CreateLinkedTokenSource(timeoutCts.Token, externalToken))
 			do
@@ -123,12 +130,36 @@ namespace DSC.TLink
 				log?.LogDebug("readPacket: got {Length} bytes from pipe, IsCompleted={IsCompleted}, IsCanceled={IsCanceled}",
 					buffer.Length, readResult.IsCompleted, readResult.IsCanceled);
 
+				if (readResult.IsCompleted && buffer.Length == 0)
+				{
+					var sinceSend = DateTime.UtcNow - lastSendTime;
+					var sinceRecv = DateTime.UtcNow - lastReceiveTime;
+					log?.LogWarning("readPacket: pipe completed with no data — remote end disconnected (last send {SendAgo:F1}s ago, last recv {RecvAgo:F1}s ago)",
+						sinceSend.TotalSeconds, sinceRecv.TotalSeconds);
+					pipeReader.AdvanceTo(buffer.End);
+					throw new TLinkPacketException("Connection closed by remote end");
+				}
+
 				ReadOnlySequence<byte> packetSlice;
 				if (tryGetPacketSlice(buffer, out packetSlice))
 				{
 					log?.LogDebug("readPacket: found complete packet ({PacketLength} bytes)", packetSlice.Length);
 					return packetSlice;
 				}
+
+				if (readResult.IsCompleted)
+				{
+					var sinceSend = DateTime.UtcNow - lastSendTime;
+					var sinceRecv = DateTime.UtcNow - lastReceiveTime;
+					log?.LogWarning("readPacket: pipe completed with {Length} bytes but no complete packet — remote end disconnected mid-message (last send {SendAgo:F1}s ago, last recv {RecvAgo:F1}s ago)",
+						buffer.Length, sinceSend.TotalSeconds, sinceRecv.TotalSeconds);
+					pipeReader.AdvanceTo(buffer.End);
+					throw new TLinkPacketException("Connection closed by remote end (incomplete packet)");
+				}
+
+				// Tell the PipeReader we've examined everything but consumed nothing,
+				// so the next read will wait for new data instead of returning the same buffer.
+				pipeReader.AdvanceTo(buffer.Start, buffer.End);
 				log?.LogDebug("readPacket: no complete packet yet in {Length} bytes, reading more...", buffer.Length);
 			} while (!linkedCts.IsCancellationRequested);
 
