@@ -1,3 +1,8 @@
+#This library is being actively developed as part of NeoHub
+https://github.com/BrianHumlicek/NeoHub
+Its possible once development slows down there I might update this will all the latest changes to make a stand along library for nuget
+, but for now, if you want to use this library, you should pull it from the NeoHub repository.
+
 # DSC Powerseries Neo Integration
 
  _Integrate with DSC Powerseries Neo alarm panel over your local network_
