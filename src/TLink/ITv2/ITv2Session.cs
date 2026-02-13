@@ -49,9 +49,9 @@ namespace DSC.TLink.ITv2
 			this.log = log;
 			this.tlinkClient = tlinkClient;
 		}
-		async Task<ITv2Header> readHeaderMessage()
+		async Task<ITv2Header> readHeaderMessage(CancellationToken cancellationToken = default, int? timeoutMs = null)
 		{
-			(_, byte[] message) = await tlinkClient.ReadMessage();
+			(_, byte[] message) = await tlinkClient.ReadMessage(cancellationToken, timeoutMs);
 			ITv2Header header = new ITv2Header();
 
 			if (receiveAESActive)
@@ -74,9 +74,9 @@ namespace DSC.TLink.ITv2
 			return header;
 		}
 
-		public async Task<T> readMessage<T>() where T : NetworkByteMessage, new()
+		public async Task<T> readMessage<T>(CancellationToken cancellationToken = default, int? timeoutMs = null) where T : NetworkByteMessage, new()
 		{
-			ITv2Header header = await readHeaderMessage();
+			ITv2Header header = await readHeaderMessage(cancellationToken, timeoutMs);
 
 			//validate that T is compatible with the Command
 			if (header is T) return (header as T)!;

@@ -141,10 +141,36 @@ The dashboard includes:
 
 > **Tip:** After setup, rename zones to friendly names (e.g., "Front Door", "Living Room Motion") by editing the entities in the HA UI. Entity IDs use the `dsc_neo_alarm_panel_` prefix (e.g., `binary_sensor.dsc_neo_alarm_panel_zone_1`).
 
+### Testing Arm/Disarm Commands via the Relay
+
+You can test commands directly against the relay server using `echo` and `nc` (netcat). The relay accepts JSON-line commands on the relay port (default 3078).
+
+**Arm away:**
+```bash
+echo '{"type":"arm_away","partition":1,"code":"1234"}' | nc localhost 3078
+```
+
+**Arm stay (home):**
+```bash
+echo '{"type":"arm_home","partition":1,"code":"1234"}' | nc localhost 3078
+```
+
+**Arm night:**
+```bash
+echo '{"type":"arm_night","partition":1,"code":"1234"}' | nc localhost 3078
+```
+
+**Disarm:**
+```bash
+echo '{"type":"disarm","partition":1,"code":"1234"}' | nc localhost 3078
+```
+
+Replace `1234` with your panel's access code. The command will be queued and sent to the panel within ~2 seconds. Check the server logs for `Panel command response: Success` to confirm.
+
 ## TODO
 
 - [ ] Better integrate C# server into Home Assistant (eliminate the need for a separate process)
-- [ ] Current solution can only read states but cannot change states — add support for arm/disarm commands from Home Assistant
+- [x] ~~Reduce command latency~~ — solved with 2s poll timeout when relay is active
 
 ## What is known so far (Jan-2024)
 

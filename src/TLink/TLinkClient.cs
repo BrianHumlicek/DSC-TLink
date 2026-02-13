@@ -92,9 +92,9 @@ namespace DSC.TLink
 		protected virtual async Task sendPacket(byte[] packet) => await pipeWriter.WriteAsync(new ReadOnlyMemory<byte>(packet));
 		#endregion
 		#region Receiving logic
-		public async Task<(byte[] header, byte[] message)> ReadMessage()
+		public async Task<(byte[] header, byte[] message)> ReadMessage(CancellationToken cancellationToken = default, int? timeoutMs = null)
 		{
-			ReadOnlySequence<byte> packetSequence = await readPacket();
+			ReadOnlySequence<byte> packetSequence = await readPacket(cancellationToken, timeoutMs);
 
 			var message = parseTLinkFrame(packetSequence);
 
@@ -110,12 +110,14 @@ namespace DSC.TLink
 			return message;
 		}
 
-		async Task<ReadOnlySequence<byte>> readPacket()
+		async Task<ReadOnlySequence<byte>> readPacket(CancellationToken externalToken = default, int? timeoutMs = null)
 		{
-			using (CancellationTokenSource timeoutCts = new CancellationTokenSource(TimeSpan.FromMilliseconds(300000)))	//TODO implement a configurable timeout
+			int timeout = timeoutMs ?? 300000;
+			using (CancellationTokenSource timeoutCts = new CancellationTokenSource(TimeSpan.FromMilliseconds(timeout)))
+			using (CancellationTokenSource linkedCts = CancellationTokenSource.CreateLinkedTokenSource(timeoutCts.Token, externalToken))
 			do
 			{
-				ReadResult readResult = await pipeReader.ReadAtLeastAsync(2, timeoutCts.Token);
+				ReadResult readResult = await pipeReader.ReadAtLeastAsync(2, linkedCts.Token);
 				ReadOnlySequence<byte> buffer = readResult.Buffer;
 
 				ReadOnlySequence<byte> packetSlice;
@@ -123,7 +125,7 @@ namespace DSC.TLink
 				{
 					return packetSlice;
 				}
-			} while (!timeoutCts.IsCancellationRequested);
+			} while (!linkedCts.IsCancellationRequested);
 
 			throw new TLinkPacketException("");
 		}

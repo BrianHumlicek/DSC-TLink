@@ -32,32 +32,47 @@ namespace DSC.TLink.ITv2
 			//throw new NotImplementedException();
 		}
 
+		// When a relay is configured, use a short read timeout so we can check for
+		// pending commands frequently. This reduces arm/disarm latency from ~30s to ~2s.
+		const int RelayPollTimeoutMs = 2000;
+
 		async Task ITlinkServerConnection.ReceiveCommand()
 		{
-			var header = await itv2Session.readMessage<ITv2Header>();
+			// With a relay, poll every 2s so commands are dispatched quickly.
+			// Without a relay, use the default long timeout (300s).
+			int? timeout = relay != null ? RelayPollTimeoutMs : null;
 
-			if (header.Command == ITv2Command.Connection_Encapsulated_Command_for_Multiple_Packets
-				|| header.Command == ITv2Command.Connection_Encapsulated_Command_for_Long_Packets)
+			try
 			{
-				log.LogDebug("  Encapsulated packet (0x{CommandHex:X4})", header.Command.HasValue ? (ushort)header.Command.Value : 0);
-				log.LogDebug("  SenderSeq:   {SenderSequence}", header.SenderSequence);
-				log.LogDebug("  ReceiverSeq: {ReceiverSequence}", header.ReceiverSequence);
-				log.LogDebug("  AppSequence: {AppSequence}", header.AppSequence);
+				var header = await itv2Session.readMessage<ITv2Header>(default, timeout);
 
-				if (header.CommandData != null && header.CommandData.Length > 0)
+				if (header.Command == ITv2Command.Connection_Encapsulated_Command_for_Multiple_Packets
+					|| header.Command == ITv2Command.Connection_Encapsulated_Command_for_Long_Packets)
 				{
-					log.LogDebug("  Raw data ({Length} bytes): {Data}", header.CommandData.Length, BitConverter.ToString(header.CommandData));
-					ParseEncapsulatedSubMessages(header.CommandData);
-					EmitSubMessageRelayEvents(header.CommandData);
-				}
-			}
-			else
-			{
-				LogCommand(header);
-				EmitRelayEvent(header);
-			}
+					log.LogDebug("  Encapsulated packet (0x{CommandHex:X4})", header.Command.HasValue ? (ushort)header.Command.Value : 0);
+					log.LogDebug("  SenderSeq:   {SenderSequence}", header.SenderSequence);
+					log.LogDebug("  ReceiverSeq: {ReceiverSequence}", header.ReceiverSequence);
+					log.LogDebug("  AppSequence: {AppSequence}", header.AppSequence);
 
-			await itv2Session.SendSimpleAck();
+					if (header.CommandData != null && header.CommandData.Length > 0)
+					{
+						log.LogDebug("  Raw data ({Length} bytes): {Data}", header.CommandData.Length, BitConverter.ToString(header.CommandData));
+						ParseEncapsulatedSubMessages(header.CommandData);
+						EmitSubMessageRelayEvents(header.CommandData);
+					}
+				}
+				else
+				{
+					LogCommand(header);
+					EmitRelayEvent(header);
+				}
+
+				await itv2Session.SendSimpleAck();
+			}
+			catch (OperationCanceledException)
+			{
+				// Read timed out — check for pending commands
+			}
 
 			// Process any pending commands from relay clients
 			await ProcessPendingCommands();
