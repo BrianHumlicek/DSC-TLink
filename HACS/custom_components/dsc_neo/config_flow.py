@@ -9,7 +9,7 @@ import voluptuous as vol
 
 from homeassistant import config_entries
 
-from .const import CONF_HOST, CONF_RELAY_PORT, DEFAULT_RELAY_PORT, DOMAIN
+from .const import CONF_HOST, CONF_RELAY_PORT, CONF_RELAY_SECRET, DEFAULT_RELAY_PORT, DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -54,6 +54,7 @@ class DscNeoConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     vol.Optional(
                         CONF_RELAY_PORT, default=DEFAULT_RELAY_PORT
                     ): int,
+                    vol.Required(CONF_RELAY_SECRET): str,
                 }
             ),
             errors=errors,

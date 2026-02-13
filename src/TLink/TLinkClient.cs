@@ -113,20 +113,26 @@ namespace DSC.TLink
 		async Task<ReadOnlySequence<byte>> readPacket(CancellationToken externalToken = default, int? timeoutMs = null)
 		{
 			int timeout = timeoutMs ?? 300000;
+			log?.LogDebug("readPacket: waiting for data (timeout={Timeout}ms)", timeout);
 			using (CancellationTokenSource timeoutCts = new CancellationTokenSource(TimeSpan.FromMilliseconds(timeout)))
 			using (CancellationTokenSource linkedCts = CancellationTokenSource.CreateLinkedTokenSource(timeoutCts.Token, externalToken))
 			do
 			{
 				ReadResult readResult = await pipeReader.ReadAtLeastAsync(2, linkedCts.Token);
 				ReadOnlySequence<byte> buffer = readResult.Buffer;
+				log?.LogDebug("readPacket: got {Length} bytes from pipe, IsCompleted={IsCompleted}, IsCanceled={IsCanceled}",
+					buffer.Length, readResult.IsCompleted, readResult.IsCanceled);
 
 				ReadOnlySequence<byte> packetSlice;
 				if (tryGetPacketSlice(buffer, out packetSlice))
 				{
+					log?.LogDebug("readPacket: found complete packet ({PacketLength} bytes)", packetSlice.Length);
 					return packetSlice;
 				}
+				log?.LogDebug("readPacket: no complete packet yet in {Length} bytes, reading more...", buffer.Length);
 			} while (!linkedCts.IsCancellationRequested);
 
+			log?.LogDebug("readPacket: timed out or cancelled after {Timeout}ms", timeout);
 			throw new TLinkPacketException("");
 		}
 

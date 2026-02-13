@@ -6,7 +6,8 @@
         "description": "Connect to the DSC TLink relay server",
         "data": {
           "host": "Relay server host",
-          "relay_port": "Relay TCP port"
+          "relay_port": "Relay TCP port",
+          "relay_secret": "Relay shared secret"
         }
       }
     },

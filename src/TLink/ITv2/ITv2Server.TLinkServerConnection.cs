@@ -41,6 +41,7 @@ namespace DSC.TLink.ITv2
 			// With a relay, poll every 2s so commands are dispatched quickly.
 			// Without a relay, use the default long timeout (300s).
 			int? timeout = relay != null ? RelayPollTimeoutMs : null;
+			log.LogDebug("ReceiveCommand: waiting for panel message (timeout={Timeout}ms, relay={HasRelay})", timeout, relay != null);
 
 			try
 			{
@@ -71,10 +72,12 @@ namespace DSC.TLink.ITv2
 			}
 			catch (OperationCanceledException)
 			{
-				// Read timed out — check for pending commands
+				log.LogDebug("ReceiveCommand: read timed out after {Timeout}ms — checking for pending relay commands", timeout);
 			}
 
 			// Process any pending commands from relay clients
+			if (relay != null)
+				log.LogDebug("ReceiveCommand: checking pending commands (queue count={Count})", relay.PendingCommands.Count);
 			await ProcessPendingCommands();
 		}
 
@@ -254,26 +257,37 @@ namespace DSC.TLink.ITv2
 
 		async Task<bool> ITlinkServerConnection.TryInitializeConnection(TLinkClient tlinkClient)
 		{
+			log.LogDebug("TryInitializeConnection: starting handshake (IntegrationId={IntegrationId})", IntegrationId);
 			byte[] id = Encoding.UTF8.GetBytes(IntegrationId);
 			tlinkClient.DefaultHeader = id;
 
 			itv2Session = new ITv2Session(tlinkClient, loggerFactory.CreateLogger<ITv2Session>());
 
+			log.LogDebug("Handshake step 1/10: reading OpenSessionMessage from panel");
 			var openSession = await itv2Session.readMessage<OpenSessionMessage>();
+			log.LogDebug("Handshake step 2/10: sending Command_Response");
 			await itv2Session.sendMessage(ITv2Command.Command_Response, new CommandResponse());
+			log.LogDebug("Handshake step 3/10: reading response");
 			var one = await itv2Session.readMessage<ITv2Header>();
 
+			log.LogDebug("Handshake step 4/10: sending Connection_Open_Session");
 			await itv2Session.sendMessage(ITv2Command.Connection_Open_Session, openSession);
+			log.LogDebug("Handshake step 5/10: reading response");
 			var two = await itv2Session.readMessage<ITv2Header>();
+			log.LogDebug("Handshake step 6/10: sending SimpleAck");
 			await itv2Session.SendSimpleAck();
 
+			log.LogDebug("Handshake step 7/10: reading RequestAccess (panel's AES initializer)");
 			var three = await itv2Session.readMessage<RequestAccess>();
 
 			byte[] transmitKey = ITv2AES.Type2InitializerTransform(EncryptionKey, three.Payload);
+			log.LogDebug("Handshake: derived transmit AES key from panel initializer");
 
 			itv2Session.EnableSendAES(transmitKey);
 
+			log.LogDebug("Handshake step 8/10: sending Command_Response (encrypted from here)");
 			await itv2Session.sendMessage(ITv2Command.Command_Response, new CommandResponse());
+			log.LogDebug("Handshake step 9/10: reading response");
 			var four = await itv2Session.readMessage<ITv2Header>();
 
 			byte[] initializer = ITv2AES.GetRandomKey();
@@ -282,14 +296,17 @@ namespace DSC.TLink.ITv2
 			{
 				Payload = initializer
 			};
-			
+
+			log.LogDebug("Handshake step 10/10: sending Connection_Request_Access (our AES initializer)");
 			await itv2Session.sendMessage(ITv2Command.Connection_Request_Access, requestAccess);
 
 			itv2Session.EnableReceiveAES(receivingKey);
+			log.LogDebug("Handshake: receive AES enabled, reading final confirmation");
 
 			var five = await itv2Session.readMessage<ITv2Header>();
 			await itv2Session.SendSimpleAck();
 
+			log.LogInformation("Handshake complete — bidirectional AES encryption active");
 			return true;
 		}
 	}

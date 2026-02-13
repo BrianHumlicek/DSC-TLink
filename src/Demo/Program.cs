@@ -30,6 +30,7 @@ namespace DSC.TLink.Demo
 				Console.WriteLine("  --port <port>    - TCP listen port for panel (default: 3072)");
 				Console.WriteLine("  --relay-port <p> - TCP relay port for Home Assistant (default: 3078)");
 				Console.WriteLine("  --relay-ip <ip>  - IP address to bind relay to (default: 0.0.0.0)");
+				Console.WriteLine("  --relay-secret <s> - Shared secret for encrypted relay communication (required)");
 				Console.WriteLine("  --debug          - Enable debug logging (shows sequence numbers, raw data)");
 				Console.WriteLine("  --trace          - Enable trace logging (most verbose)");
 				return;
@@ -40,6 +41,7 @@ namespace DSC.TLink.Demo
 			int port = 3072;
 			int relayPort = 3078;
 			string relayIp = "0.0.0.0";
+			string? relaySecret = null;
 			LogLevel logLevel = LogLevel.Information;
 
 			for (int i = 2; i < args.Length; i++)
@@ -54,6 +56,9 @@ namespace DSC.TLink.Demo
 						break;
 					case "--relay-ip" when i + 1 < args.Length:
 						relayIp = args[++i];
+						break;
+					case "--relay-secret" when i + 1 < args.Length:
+						relaySecret = args[++i];
 						break;
 					case "--debug":
 						logLevel = LogLevel.Debug;
@@ -77,7 +82,13 @@ namespace DSC.TLink.Demo
 				configure.SetMinimumLevel(logLevel);
 			});
 
-			var relay = new JsonRelay(server.ServiceProvider.LogFactory, server.shutdownToken);
+			if (string.IsNullOrEmpty(relaySecret))
+			{
+				Console.WriteLine("Error: --relay-secret is required");
+				return;
+			}
+
+			var relay = new JsonRelay(server.ServiceProvider.LogFactory, server.shutdownToken, relaySecret);
 			server.ServiceProvider.Relay = relay;
 
 			Console.CancelKeyPress += (sender, e) =>

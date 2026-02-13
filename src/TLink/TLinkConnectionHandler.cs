@@ -32,27 +32,39 @@ namespace DSC.TLink
 		}
 		public async override Task OnConnectedAsync(ConnectionContext connection)
 		{
-			log.LogInformation($"Connection request from {connection.RemoteEndPoint}");
+			log.LogInformation("Connection request from {RemoteEndPoint}", connection.RemoteEndPoint);
 			try
 			{
+				log.LogDebug("Creating TLinkClient for {RemoteEndPoint}", connection.RemoteEndPoint);
 				TLinkClient tlinkClient = new TLinkClient(connection.Transport, loggerFactory.CreateLogger<TLinkClient>());
+				log.LogDebug("Starting TryInitializeConnection for {RemoteEndPoint}", connection.RemoteEndPoint);
 				if (!await tLinkServer.TryInitializeConnection(tlinkClient))
 				{
-					log.LogWarning("Unable to serve connection request from {RemoteEndPoint}", connection.RemoteEndPoint);
+					log.LogWarning("Unable to serve connection request from {RemoteEndPoint} — initialization handshake failed", connection.RemoteEndPoint);
 					return;
 				}
-				log.LogInformation("TLink connected to {RemoteEndPoint}", connection.RemoteEndPoint);
+				log.LogInformation("TLink connected to {RemoteEndPoint} — entering command receive loop", connection.RemoteEndPoint);
+				int commandCount = 0;
 				while (tLinkServer.Active)
 				{
 					await tLinkServer.ReceiveCommand();
+					commandCount++;
+					if (commandCount % 100 == 0)
+						log.LogDebug("Processed {CommandCount} commands from {RemoteEndPoint}", commandCount, connection.RemoteEndPoint);
 				}
+				log.LogDebug("Command loop ended: Active={Active}, commands processed={CommandCount}", tLinkServer.Active, commandCount);
+			}
+			catch (OperationCanceledException)
+			{
+				log.LogDebug("Connection to {RemoteEndPoint} cancelled (shutdown)", connection.RemoteEndPoint);
 			}
 			catch (Exception ex)
 			{
-				log.LogError(ex, "TLink server connection error");
+				log.LogError(ex, "TLink server connection error with {RemoteEndPoint}: {Message}", connection.RemoteEndPoint, ex.Message);
 			}
 			finally
 			{
+				log.LogDebug("Resetting server connection state for {RemoteEndPoint}", connection.RemoteEndPoint);
 				try
 				{
 					tLinkServer.EnsureServerConnectionReset();

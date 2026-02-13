@@ -36,11 +36,13 @@ namespace DSC.TLink.ITv2
 		bool receiveAESActive;
 		public void EnableSendAES(byte[] remoteKey)
 		{
+			log.LogDebug("Enabling send AES encryption (key length={KeyLen})", remoteKey.Length);
 			sendAES.Key = remoteKey;
 			sendAESActive = true;
 		}
 		public void EnableReceiveAES(byte[] localKey)
 		{
+			log.LogDebug("Enabling receive AES encryption (key length={KeyLen})", localKey.Length);
 			receiveAES.Key = localKey;
 			receiveAESActive = true;
 		}
@@ -51,7 +53,9 @@ namespace DSC.TLink.ITv2
 		}
 		async Task<ITv2Header> readHeaderMessage(CancellationToken cancellationToken = default, int? timeoutMs = null)
 		{
+			log.LogDebug("readHeaderMessage: waiting for message (receiveAES={AesActive}, timeout={Timeout})", receiveAESActive, timeoutMs);
 			(_, byte[] message) = await tlinkClient.ReadMessage(cancellationToken, timeoutMs);
+			log.LogDebug("readHeaderMessage: received {Length} bytes", message.Length);
 			ITv2Header header = new ITv2Header();
 
 			if (receiveAESActive)
@@ -68,8 +72,10 @@ namespace DSC.TLink.ITv2
 			tl280Sequence = header.SenderSequence;	//The TL280 sends its sequence number in the Host field when it is sending commands.
 			if (localSequence != header.ReceiverSequence)
 			{
-				log.LogWarning("Sequence mismatch!");
+				log.LogWarning("Sequence mismatch! localSequence={LocalSeq} != header.ReceiverSequence={RecvSeq}", localSequence, header.ReceiverSequence);
 			}
+			log.LogDebug("readHeaderMessage: SenderSeq={SenderSeq}, ReceiverSeq={ReceiverSeq}, AppSeq={AppSeq}, Command={Command}",
+				header.SenderSequence, header.ReceiverSequence, header.AppSequence, header.Command);
 			if (header.AppSequence.HasValue) appSequence = header.AppSequence.Value;
 			return header;
 		}
