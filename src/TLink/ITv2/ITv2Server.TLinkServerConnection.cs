@@ -36,6 +36,11 @@ namespace DSC.TLink.ITv2
 		// pending commands frequently. This reduces arm/disarm latency from ~30s to ~2s.
 		const int RelayPollTimeoutMs = 2000;
 
+		// Send a keepalive poll to the panel if no messages have been exchanged
+		// for this long. Keeps the TCP connection alive across NAT/firewalls.
+		const int HeartbeatIntervalSeconds = 30;
+		DateTime lastPanelActivity = DateTime.UtcNow;
+
 		async Task ITlinkServerConnection.ReceiveCommand()
 		{
 			// With a relay, poll every 2s so commands are dispatched quickly.
@@ -46,6 +51,7 @@ namespace DSC.TLink.ITv2
 			try
 			{
 				var header = await itv2Session.readMessage<ITv2Header>(default, timeout);
+				lastPanelActivity = DateTime.UtcNow;
 
 				if (header.Command == ITv2Command.Connection_Encapsulated_Command_for_Multiple_Packets
 					|| header.Command == ITv2Command.Connection_Encapsulated_Command_for_Long_Packets)
@@ -72,11 +78,33 @@ namespace DSC.TLink.ITv2
 			}
 			catch (OperationCanceledException)
 			{
-				// Read timed out — check for pending commands
+				// Read timed out — send a keepalive poll if idle too long
+				if (DateTime.UtcNow - lastPanelActivity > TimeSpan.FromSeconds(HeartbeatIntervalSeconds))
+				{
+					await SendHeartbeat();
+				}
 			}
 
 			// Process any pending commands from relay clients
 			await ProcessPendingCommands();
+		}
+
+		async Task SendHeartbeat()
+		{
+			try
+			{
+				log.LogDebug("Sending keepalive poll to panel");
+				await itv2Session.sendMessage(ITv2Command.Connection_Poll);
+				var response = await itv2Session.readMessage<ITv2Header>();
+				await itv2Session.SendSimpleAck();
+				lastPanelActivity = DateTime.UtcNow;
+				log.LogDebug("Keepalive poll acknowledged by panel");
+			}
+			catch (Exception ex)
+			{
+				log.LogWarning(ex, "Keepalive poll failed");
+				throw;
+			}
 		}
 
 		async Task ProcessPendingCommands()
