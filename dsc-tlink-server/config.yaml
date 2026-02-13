@@ -1,0 +1,33 @@
+name: DSC TLink Server
+version: "0.1.0"
+slug: dsc_tlink_server
+description: DSC Powerseries Neo relay server for Home Assistant
+url: https://github.com/Z6543/DSC-TLink
+arch:
+  - amd64
+  - aarch64
+startup: application
+boot: auto
+host_network: true
+options:
+  integration_id: ""
+  encryption_key: ""
+  relay_secret: ""
+  panel_port: 3072
+  relay_port: 3078
+  relay_ip: "0.0.0.0"
+  log_level: info
+schema:
+  integration_id: str
+  encryption_key: str
+  relay_secret: str
+  panel_port: int(1024,65535)
+  relay_port: int(1024,65535)
+  relay_ip: str
+  log_level: list(trace|debug|info)
+ports:
+  3072/tcp: 3072
+  3078/tcp: 3078
+ports_description:
+  3072/tcp: "Panel connection (ITv2)"
+  3078/tcp: "Relay for Home Assistant"

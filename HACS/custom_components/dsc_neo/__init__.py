@@ -3,25 +3,60 @@
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import json
 import logging
+import os
+import struct
+
+from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.dispatcher import async_dispatcher_send
 
-from .const import CONF_HOST, CONF_RELAY_PORT, DOMAIN
+from .const import CONF_HOST, CONF_RELAY_PORT, CONF_RELAY_SECRET, DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
 
 PLATFORMS = [Platform.BINARY_SENSOR, Platform.ALARM_CONTROL_PANEL]
 
+PBKDF2_SALT = b"DSC-TLink-Relay-v1"
+PBKDF2_ITERATIONS = 100_000
+NONCE_SIZE = 12
+
+
+def _derive_key(secret: str) -> bytes:
+    """Derive a 256-bit AES key from a passphrase using PBKDF2-SHA256."""
+    return hashlib.pbkdf2_hmac(
+        "sha256", secret.encode(), PBKDF2_SALT, PBKDF2_ITERATIONS, dklen=32
+    )
+
+
+def _encrypt(key: bytes, plaintext: bytes) -> bytes:
+    """Encrypt plaintext with AES-256-GCM, returning nonce + ciphertext + tag."""
+    nonce = os.urandom(NONCE_SIZE)
+    aesgcm = AESGCM(key)
+    ciphertext_and_tag = aesgcm.encrypt(nonce, plaintext, None)
+    return nonce + ciphertext_and_tag
+
+
+def _decrypt(key: bytes, data: bytes) -> bytes:
+    """Decrypt AES-256-GCM payload (nonce + ciphertext + tag)."""
+    nonce = data[:NONCE_SIZE]
+    ciphertext_and_tag = data[NONCE_SIZE:]
+    aesgcm = AESGCM(key)
+    return aesgcm.decrypt(nonce, ciphertext_and_tag, None)
+
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up DSC Neo from a config entry."""
     coordinator = DscNeoCoordinator(
-        hass, entry.data[CONF_HOST], entry.data[CONF_RELAY_PORT]
+        hass,
+        entry.data[CONF_HOST],
+        entry.data[CONF_RELAY_PORT],
+        entry.data[CONF_RELAY_SECRET],
     )
     hass.data.setdefault(DOMAIN, {})[entry.entry_id] = coordinator
 
@@ -43,13 +78,17 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 class DscNeoCoordinator:
     """Manages the TCP connection to the C# relay and dispatches updates."""
 
-    def __init__(self, hass: HomeAssistant, host: str, port: int) -> None:
+    def __init__(
+        self, hass: HomeAssistant, host: str, port: int, secret: str
+    ) -> None:
         """Initialize the coordinator."""
         self.hass = hass
         self.host = host
         self.port = port
+        self._key = _derive_key(secret)
         self._task: asyncio.Task | None = None
         self._running = False
+        self._writer: asyncio.StreamWriter | None = None
         self.zones: dict[int, bool] = {}
         self.partitions: dict[int, dict] = {}
         self.connected = False
@@ -69,6 +108,17 @@ class DscNeoCoordinator:
             except asyncio.CancelledError:
                 pass
 
+    async def _read_message(self, reader: asyncio.StreamReader) -> bytes:
+        """Read a length-prefixed encrypted message and decrypt it."""
+        length_bytes = await asyncio.wait_for(
+            reader.readexactly(4), timeout=300
+        )
+        length = struct.unpack(">I", length_bytes)[0]
+        payload = await asyncio.wait_for(
+            reader.readexactly(length), timeout=30
+        )
+        return _decrypt(self._key, payload)
+
     async def _connect_loop(self) -> None:
         """Maintain persistent connection to relay, reconnecting on failure."""
         while self._running:
@@ -76,19 +126,30 @@ class DscNeoCoordinator:
                 reader, writer = await asyncio.wait_for(
                     asyncio.open_connection(self.host, self.port), timeout=10
                 )
+                self._writer = writer
                 self.connected = True
                 _LOGGER.info(
                     "Connected to DSC Neo relay at %s:%s", self.host, self.port
                 )
+                async_dispatcher_send(
+                    self.hass, f"{DOMAIN}_connection_update"
+                )
+                # Ensure default partition exists so alarm panel entity
+                # is available immediately, even before the first panel event.
+                if 1 not in self.partitions:
+                    self.partitions[1] = {"state": "disarmed", "ready": False}
+                    async_dispatcher_send(
+                        self.hass, f"{DOMAIN}_new_partition", 1
+                    )
                 try:
                     while self._running:
-                        line = await asyncio.wait_for(
-                            reader.readline(), timeout=300
-                        )
+                        plaintext = await self._read_message(reader)
+                        line = plaintext.decode().strip()
                         if not line:
-                            _LOGGER.warning("Relay connection closed")
-                            break
-                        await self._process_line(line.decode().strip())
+                            continue
+                        await self._process_line(line)
+                except asyncio.IncompleteReadError:
+                    _LOGGER.warning("Relay connection closed")
                 except asyncio.TimeoutError:
                     _LOGGER.warning("No data from relay for 5 minutes")
                 except asyncio.CancelledError:
@@ -97,6 +158,10 @@ class DscNeoCoordinator:
                     _LOGGER.exception("Error reading from relay")
                 finally:
                     self.connected = False
+                    self._writer = None
+                    async_dispatcher_send(
+                        self.hass, f"{DOMAIN}_connection_update"
+                    )
                     writer.close()
                     try:
                         await writer.wait_closed()
@@ -184,3 +249,19 @@ class DscNeoCoordinator:
 
         elif msg_type == "heartbeat":
             pass
+
+    async def send_command(self, command: dict) -> None:
+        """Send an encrypted JSON command to the relay server."""
+        writer = self._writer
+        if writer is None or writer.is_closing():
+            _LOGGER.warning("Cannot send command — not connected to relay")
+            return
+        try:
+            plaintext = json.dumps(command).encode()
+            payload = _encrypt(self._key, plaintext)
+            length_prefix = struct.pack(">I", len(payload))
+            writer.write(length_prefix + payload)
+            await writer.drain()
+            _LOGGER.debug("Sent command to relay: %s", command)
+        except (OSError, ConnectionError) as exc:
+            _LOGGER.error("Failed to send command to relay: %s", exc)

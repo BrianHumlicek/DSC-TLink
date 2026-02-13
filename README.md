@@ -53,6 +53,7 @@ The server will start listening on TCP port 3072 (panel connection) and port 307
 The TL280 needs to be configured to connect to your server. This can be done either via DLS5 software or directly on the panel keypad.
 
 #### Option A: Via DLS5 Software
+To get the DLS5 software, google "Download DLS5-INT.exe"
 
 Navigate to **Integration Options** > **Session 1 Integration Opt** and configure the following:
 
@@ -60,7 +61,6 @@ Navigate to **Integration Options** > **Session 1 Integration Opt** and configur
 
 | Section | Setting | Value |
 |---------|---------|-------|
-| `[851][450]` | Type 1 Integration Access Code | Your access code (e.g. `12345678`) |
 | `[851][701]` | Type 2 Integration Access Code | Your 32-char hex key |
 | `[851][452]-4` | Integration Encryption Type | `Type 2` |
 | `[851][452]` | Interactive Configuration | `Integration Over Ethernet` |
@@ -140,6 +140,37 @@ The dashboard includes:
 ![HA Dashboard](docs/images/HA_dashboard.png)
 
 > **Tip:** After setup, rename zones to friendly names (e.g., "Front Door", "Living Room Motion") by editing the entities in the HA UI. Entity IDs use the `dsc_neo_alarm_panel_` prefix (e.g., `binary_sensor.dsc_neo_alarm_panel_zone_1`).
+
+### Testing Arm/Disarm Commands via the Relay
+
+You can test commands directly against the relay server using `echo` and `nc` (netcat). The relay accepts JSON-line commands on the relay port (default 3078).
+
+**Arm away:**
+```bash
+echo '{"type":"arm_away","partition":1,"code":"1234"}' | nc localhost 3078
+```
+
+**Arm stay (home):**
+```bash
+echo '{"type":"arm_home","partition":1,"code":"1234"}' | nc localhost 3078
+```
+
+**Arm night:**
+```bash
+echo '{"type":"arm_night","partition":1,"code":"1234"}' | nc localhost 3078
+```
+
+**Disarm:**
+```bash
+echo '{"type":"disarm","partition":1,"code":"1234"}' | nc localhost 3078
+```
+
+Replace `1234` with your panel's access code. The command will be queued and sent to the panel within ~2 seconds. Check the server logs for `Panel command response: Success` to confirm.
+
+## TODO
+
+- [ ] Better integrate C# server into Home Assistant (eliminate the need for a separate process)
+- [x] ~~Reduce command latency~~ — solved with 2s poll timeout when relay is active
 
 ## What is known so far (Jan-2024)
 

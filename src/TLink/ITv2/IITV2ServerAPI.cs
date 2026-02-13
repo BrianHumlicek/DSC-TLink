@@ -18,12 +18,9 @@ namespace DSC.TLink.ITv2
 {
 	internal interface IITV2ServerAPI
 	{
-		public void ArmStay();
-		public void ArmAway();
-		public void Disarm();
-		public void GetAlarmConfiguration();
-		public void GetAlarmStatus();
-		public void GetPartitionConfiguration();
-		public void GetPartitionStatus();
+		Task ArmAway(byte partition, string accessCode);
+		Task ArmStay(byte partition, string accessCode);
+		Task ArmNight(byte partition, string accessCode);
+		Task Disarm(byte partition, string accessCode);
 	}
 }

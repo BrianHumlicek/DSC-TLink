@@ -16,6 +16,7 @@
 
 using DSC.TLink.ITv2.Enumerations;
 using DSC.TLink.ITv2.Messages;
+using DSC.TLink.Relay;
 using Microsoft.Extensions.Logging;
 using System.Text;
 
@@ -31,32 +32,121 @@ namespace DSC.TLink.ITv2
 			//throw new NotImplementedException();
 		}
 
+		// When a relay is configured, use a short read timeout so we can check for
+		// pending commands frequently. This reduces arm/disarm latency from ~30s to ~2s.
+		const int RelayPollTimeoutMs = 2000;
+
+		// Send a keepalive poll to the panel if no messages have been exchanged
+		// for this long. Keeps the TCP connection alive across NAT/firewalls.
+		const int HeartbeatIntervalSeconds = 30;
+		DateTime lastPanelActivity = DateTime.UtcNow;
+
 		async Task ITlinkServerConnection.ReceiveCommand()
 		{
-			var header = await itv2Session.readMessage<ITv2Header>();
+			// With a relay, poll every 2s so commands are dispatched quickly.
+			// Without a relay, use the default long timeout (300s).
+			int? timeout = relay != null ? RelayPollTimeoutMs : null;
+			// log.LogDebug("ReceiveCommand: waiting for panel message (timeout={Timeout}ms, relay={HasRelay})", timeout, relay != null);
 
-			if (header.Command == ITv2Command.Connection_Encapsulated_Command_for_Multiple_Packets
-				|| header.Command == ITv2Command.Connection_Encapsulated_Command_for_Long_Packets)
+			try
 			{
-				log.LogDebug("  Encapsulated packet (0x{CommandHex:X4})", header.Command.HasValue ? (ushort)header.Command.Value : 0);
-				log.LogDebug("  SenderSeq:   {SenderSequence}", header.SenderSequence);
-				log.LogDebug("  ReceiverSeq: {ReceiverSequence}", header.ReceiverSequence);
-				log.LogDebug("  AppSequence: {AppSequence}", header.AppSequence);
+				var header = await itv2Session.readMessage<ITv2Header>(default, timeout);
+				lastPanelActivity = DateTime.UtcNow;
 
-				if (header.CommandData != null && header.CommandData.Length > 0)
+				if (header.Command == ITv2Command.Connection_Encapsulated_Command_for_Multiple_Packets
+					|| header.Command == ITv2Command.Connection_Encapsulated_Command_for_Long_Packets)
 				{
-					log.LogDebug("  Raw data ({Length} bytes): {Data}", header.CommandData.Length, BitConverter.ToString(header.CommandData));
-					ParseEncapsulatedSubMessages(header.CommandData);
-					EmitSubMessageRelayEvents(header.CommandData);
+					log.LogDebug("  Encapsulated packet (0x{CommandHex:X4})", header.Command.HasValue ? (ushort)header.Command.Value : 0);
+					log.LogDebug("  SenderSeq:   {SenderSequence}", header.SenderSequence);
+					log.LogDebug("  ReceiverSeq: {ReceiverSequence}", header.ReceiverSequence);
+					log.LogDebug("  AppSequence: {AppSequence}", header.AppSequence);
+
+					if (header.CommandData != null && header.CommandData.Length > 0)
+					{
+						log.LogDebug("  Raw data ({Length} bytes): {Data}", header.CommandData.Length, BitConverter.ToString(header.CommandData));
+						ParseEncapsulatedSubMessages(header.CommandData);
+						EmitSubMessageRelayEvents(header.CommandData);
+					}
+				}
+				else
+				{
+					LogCommand(header);
+					EmitRelayEvent(header);
+				}
+
+				await itv2Session.SendSimpleAck();
+			}
+			catch (OperationCanceledException)
+			{
+				// Read timed out — send a keepalive poll if idle too long
+				if (DateTime.UtcNow - lastPanelActivity > TimeSpan.FromSeconds(HeartbeatIntervalSeconds))
+				{
+					await SendHeartbeat();
 				}
 			}
-			else
-			{
-				LogCommand(header);
-				EmitRelayEvent(header);
-			}
 
-			await itv2Session.SendSimpleAck();
+			// Process any pending commands from relay clients
+			await ProcessPendingCommands();
+		}
+
+		async Task SendHeartbeat()
+		{
+			try
+			{
+				log.LogDebug("Sending keepalive poll to panel");
+				await itv2Session.sendMessage(ITv2Command.Connection_Poll);
+				var response = await itv2Session.readMessage<ITv2Header>();
+				await itv2Session.SendSimpleAck();
+				lastPanelActivity = DateTime.UtcNow;
+				log.LogDebug("Keepalive poll acknowledged by panel");
+			}
+			catch (Exception ex)
+			{
+				log.LogWarning(ex, "Keepalive poll failed");
+				throw;
+			}
+		}
+
+		async Task ProcessPendingCommands()
+		{
+			if (relay == null) return;
+
+			IITV2ServerAPI api = this;
+			while (relay.PendingCommands.TryDequeue(out var command))
+			{
+				try
+				{
+					byte partition = (byte)command.Partition;
+					if (string.IsNullOrEmpty(command.Code))
+					{
+						log.LogWarning("Command {Type} requires an access code", command.Type);
+						break;
+					}
+					switch (command.Type.ToLowerInvariant())
+					{
+						case "arm_away":
+							await api.ArmAway(partition, command.Code);
+							break;
+						case "arm_home":
+						case "arm_stay":
+							await api.ArmStay(partition, command.Code);
+							break;
+						case "arm_night":
+							await api.ArmNight(partition, command.Code);
+							break;
+						case "disarm":
+							await api.Disarm(partition, command.Code);
+							break;
+						default:
+							log.LogWarning("Unknown relay command type: {Type}", command.Type);
+							break;
+					}
+				}
+				catch (Exception ex)
+				{
+					log.LogError(ex, "Error processing relay command: {Type}", command.Type);
+				}
+			}
 		}
 
 		void LogCommand(ITv2Header header)
@@ -171,6 +261,7 @@ namespace DSC.TLink.ITv2
 						0x00 => "disarmed",
 						0x01 => "armed_home",
 						0x02 => "armed_away",
+						0x03 => "armed_night",
 						_ => $"unknown_0x{payload[1]:X2}"
 					};
 					yield return new { type = "arming", partition = (int)payload[0], state };
@@ -192,26 +283,37 @@ namespace DSC.TLink.ITv2
 
 		async Task<bool> ITlinkServerConnection.TryInitializeConnection(TLinkClient tlinkClient)
 		{
+			log.LogDebug("TryInitializeConnection: starting handshake (IntegrationId={IntegrationId})", IntegrationId);
 			byte[] id = Encoding.UTF8.GetBytes(IntegrationId);
 			tlinkClient.DefaultHeader = id;
 
 			itv2Session = new ITv2Session(tlinkClient, loggerFactory.CreateLogger<ITv2Session>());
 
+			log.LogDebug("Handshake step 1/10: reading OpenSessionMessage from panel");
 			var openSession = await itv2Session.readMessage<OpenSessionMessage>();
+			log.LogDebug("Handshake step 2/10: sending Command_Response");
 			await itv2Session.sendMessage(ITv2Command.Command_Response, new CommandResponse());
+			log.LogDebug("Handshake step 3/10: reading response");
 			var one = await itv2Session.readMessage<ITv2Header>();
 
+			log.LogDebug("Handshake step 4/10: sending Connection_Open_Session");
 			await itv2Session.sendMessage(ITv2Command.Connection_Open_Session, openSession);
+			log.LogDebug("Handshake step 5/10: reading response");
 			var two = await itv2Session.readMessage<ITv2Header>();
+			log.LogDebug("Handshake step 6/10: sending SimpleAck");
 			await itv2Session.SendSimpleAck();
 
+			log.LogDebug("Handshake step 7/10: reading RequestAccess (panel's AES initializer)");
 			var three = await itv2Session.readMessage<RequestAccess>();
 
 			byte[] transmitKey = ITv2AES.Type2InitializerTransform(EncryptionKey, three.Payload);
+			log.LogDebug("Handshake: derived transmit AES key from panel initializer");
 
 			itv2Session.EnableSendAES(transmitKey);
 
+			log.LogDebug("Handshake step 8/10: sending Command_Response (encrypted from here)");
 			await itv2Session.sendMessage(ITv2Command.Command_Response, new CommandResponse());
+			log.LogDebug("Handshake step 9/10: reading response");
 			var four = await itv2Session.readMessage<ITv2Header>();
 
 			byte[] initializer = ITv2AES.GetRandomKey();
@@ -220,14 +322,17 @@ namespace DSC.TLink.ITv2
 			{
 				Payload = initializer
 			};
-			
+
+			log.LogDebug("Handshake step 10/10: sending Connection_Request_Access (our AES initializer)");
 			await itv2Session.sendMessage(ITv2Command.Connection_Request_Access, requestAccess);
 
 			itv2Session.EnableReceiveAES(receivingKey);
+			log.LogDebug("Handshake: receive AES enabled, reading final confirmation");
 
 			var five = await itv2Session.readMessage<ITv2Header>();
 			await itv2Session.SendSimpleAck();
 
+			log.LogInformation("Handshake complete — bidirectional AES encryption active");
 			return true;
 		}
 	}
