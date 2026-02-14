@@ -13,4 +13,11 @@ FROM ${BUILD_FROM}
 RUN apk add --no-cache libstdc++ libgcc icu-libs
 COPY --from=build /app /app
 COPY run.sh /
-RUN chmod a+x /run.sh
+
+# Register run.sh as an s6-overlay v3 service
+RUN chmod a+x /run.sh && \
+    mkdir -p /etc/s6-overlay/s6-rc.d/dsc-tlink && \
+    echo "longrun" > /etc/s6-overlay/s6-rc.d/dsc-tlink/type && \
+    ln -s /run.sh /etc/s6-overlay/s6-rc.d/dsc-tlink/run && \
+    mkdir -p /etc/s6-overlay/s6-rc.d/user/contents.d && \
+    touch /etc/s6-overlay/s6-rc.d/user/contents.d/dsc-tlink
