@@ -1,5 +1,5 @@
 name: DSC TLink Server
-version: "0.1.1"
+version: "0.1.2"
 slug: dsc_tlink_server
 description: DSC Powerseries Neo relay server for Home Assistant
 url: https://github.com/Z6543/DSC-TLink
