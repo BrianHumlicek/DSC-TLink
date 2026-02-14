@@ -14,4 +14,3 @@ RUN apk add --no-cache libstdc++ libgcc icu-libs
 COPY --from=build /app /app
 COPY run.sh /
 RUN chmod a+x /run.sh
-CMD ["/run.sh"]
