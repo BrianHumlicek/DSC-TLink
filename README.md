@@ -114,21 +114,26 @@ TL280 Panel ──TCP:3072──▶ DSC TLink Add-on ──TCP:3078──▶ HA 
                           (decode ITv2)      (JSON relay)   (entities)
 ```
 
-#### 4a. Copy the integration files to Home Assistant
+#### 4a. Install via HACS (recommended)
+
+1. Open **HACS** in Home Assistant
+2. Click the **three-dot menu** (top right) → **Custom repositories**
+3. Add `https://github.com/Z6543/DSC-TLink` with category **Integration**
+4. Find **DSC Powerseries Neo** and click **Install**
+5. Restart Home Assistant (**Settings → System → Restart**)
+
+<details>
+<summary><strong>Alternative: Manual install</strong></summary>
 
 ```bash
-scp -r HACS/custom_components/dsc_neo/ user@HA_IP:/config/custom_components/dsc_neo/
+scp -r custom_components/dsc_neo/ user@HA_IP:/config/custom_components/dsc_neo/
 ```
 
-Replace `user` with your HA username (often `root` for HAOS) and `HA_IP` with your Home Assistant IP.
+Replace `user` with your HA username (often `root` for HAOS) and `HA_IP` with your Home Assistant IP. Then restart Home Assistant.
 
-> **Alternative:** If you have the Samba add-on, mount the HA share via Finder/Explorer and copy the `dsc_neo` folder into `config/custom_components/`.
+</details>
 
-#### 4b. Restart Home Assistant
-
-Go to **Settings → System → Restart**.
-
-#### 4c. Add the integration
+#### 4b. Add the integration
 
 1. Go to **Settings → Devices & Services → Add Integration**
 2. Search for **DSC Neo**
@@ -147,7 +152,7 @@ A pre-built security dashboard is included in the repository.
 2. Name it (e.g., "DSC Neo Alarm"), pick an icon, and save
 3. Open the new dashboard → click the 3 dots (⋮) → **Edit Dashboard**
 4. Click the 3 dots again → **Raw configuration editor**
-5. Paste the contents of [`HACS/dashboard/dsc_neo_dashboard.yaml`](https://github.com/Z6543/DSC-TLink/blob/main/HACS/dashboard/dsc_neo_dashboard.yaml)
+5. Paste the contents of [`dashboard/dsc_neo_dashboard.yaml`](https://github.com/Z6543/DSC-TLink/blob/main/dashboard/dsc_neo_dashboard.yaml)
 6. Save
 
 The dashboard includes:

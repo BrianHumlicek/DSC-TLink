@@ -378,3 +378,6 @@ HACS/.DS_Store
 HACS/custom_components/.DS_Store
 HACS/custom_components/dsc_neo/.DS_Store
 src/demolog.txt
+NEO_Panels_HS2XXX_v150.bin
+
+NEO_Panels_HS2XXX_v150.flash
