@@ -4,6 +4,8 @@
 
 **Repository:** [https://github.com/Z6543/DSC-TLink](https://github.com/Z6543/DSC-TLink)
 
+[![Demo Video](https://img.youtube.com/vi/_5bKur2W-EU/0.jpg)](https://youtu.be/_5bKur2W-EU)
+
 ## Hardware
 
 My setup consists of the following hardware:
