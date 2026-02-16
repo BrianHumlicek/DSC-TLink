@@ -29,11 +29,10 @@ namespace DSC.TLink.Demo
 			ServiceProvider.shutdownTokenGetter = () => shutdownToken;
 		}
 		internal  MockServiceProvider ServiceProvider { get; } = new MockServiceProvider();
-		CancellationTokenSource? cancellationTokenSource;
-		public CancellationToken shutdownToken => cancellationTokenSource?.Token ?? CancellationToken.None;
+		CancellationTokenSource cancellationTokenSource = new CancellationTokenSource();
+		public CancellationToken shutdownToken => cancellationTokenSource.Token;
 		public async Task TcpListenUntilStopped(int port)
 		{
-			cancellationTokenSource = new CancellationTokenSource();
 			await TcpListen(port);
 		}
 		public async Task TcpListen(int port)
@@ -42,18 +41,26 @@ namespace DSC.TLink.Demo
 			{
 				log.LogInformation($"Starting TCP session on port {port}");
 				listener.Start();
+				log.LogDebug("TCP listener started, waiting for connections on port {Port}", port);
 				do
 				{
+					log.LogDebug("Waiting for next TCP connection...");
 					TcpClient tcpClient = await listener.AcceptTcpClientAsync(shutdownToken);
 					try
 					{
 						if (tcpClient.Connected)
 						{
-							log.LogInformation($"Got connection from {tcpClient.Client.RemoteEndPoint}");
+							var remote = tcpClient.Client.RemoteEndPoint;
+							log.LogInformation($"Got connection from {remote}");
+							log.LogDebug("TCP socket state: Connected={Connected}, Available={Available}, LocalEndPoint={Local}, RemoteEndPoint={Remote}",
+								tcpClient.Connected, tcpClient.Available, tcpClient.Client.LocalEndPoint, remote);
+							log.LogDebug("TCP socket options: NoDelay={NoDelay}, ReceiveTimeout={RecvTimeout}ms, SendTimeout={SendTimeout}ms, ReceiveBufferSize={RecvBuf}, SendBufferSize={SendBuf}",
+								tcpClient.NoDelay, tcpClient.ReceiveTimeout, tcpClient.SendTimeout, tcpClient.ReceiveBufferSize, tcpClient.SendBufferSize);
 							ConnectionContext connectionContext = new TcpClientConnectionContext(tcpClient);
 							ConnectionHandler connectionHandler = ServiceProvider.CreateITv2ConnectionHandler();
+							log.LogDebug("Handing connection from {Remote} to ITv2ConnectionHandler", remote);
 							await connectionHandler.OnConnectedAsync(connectionContext);
-							log.LogInformation("Connection closed.");
+							log.LogInformation("Connection closed from {Remote}.", remote);
 						}
 						else if (shutdownToken.IsCancellationRequested)
 						{
@@ -62,16 +69,17 @@ namespace DSC.TLink.Demo
 						}
 						else
 						{
-							log.LogError($"TCP connection error");
+							log.LogError("TCP connection error: AcceptTcpClient returned disconnected client");
 						}
 					}
 					catch (Exception ex)
 					{
-						log.LogError(ex, "Exception during session");
+						log.LogError(ex, "Exception during session with {Remote}", tcpClient.Client.RemoteEndPoint);
 						break;
 					}
 					finally
 					{
+						log.LogDebug("Disposing TCP client for {Remote}", tcpClient.Client.RemoteEndPoint);
 						tcpClient.Dispose();
 					}
 				} while (shutdownToken.CanBeCanceled);

@@ -16,6 +16,7 @@
 
 using DSC.TLink.Demo;
 using DSC.TLink.ITv2;
+using DSC.TLink.Relay;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 
@@ -26,7 +27,10 @@ namespace DSC.TLink
 		public ILoggerFactory LogFactory { get; set; } = NullLoggerFactory.Instance;
 		CancellationToken shutdownToken => shutdownTokenGetter?.Invoke() ?? CancellationToken.None;
 		public Func<CancellationToken>? shutdownTokenGetter { get; set; }
+		public string IntegrationId { get; set; } = "";
+		public string EncryptionKey { get; set; } = "";
+		public JsonRelay? Relay { get; set; }
 		public ITv2ConnectionHandler CreateITv2ConnectionHandler() => new ITv2ConnectionHandler(CreateITv2Server(), LogFactory);
-		public ITlinkServerConnection CreateITv2Server() => new ITv2Server(LogFactory, shutdownToken);
+		public ITlinkServerConnection CreateITv2Server() => new ITv2Server(LogFactory, shutdownToken, IntegrationId, EncryptionKey, Relay);
 	}
 }

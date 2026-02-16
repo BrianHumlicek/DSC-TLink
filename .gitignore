@@ -3,6 +3,13 @@
 ##
 ## Get latest from https://github.com/github/gitignore/blob/master/VisualStudio.gitignore
 
+tools/DSC_NEO/**
+tools/DSC_NEO/*/*
+
+tools/*/*
+tools/**
+
+
 # User-specific files
 *.rsuser
 *.suo
@@ -362,3 +369,15 @@ MigrationBackup/
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
 /ITv2_Integration_Options.txt
+
+# macOS specific files
+.DS_Store
+.AppleDouble
+.LSOverride
+HACS/.DS_Store
+HACS/custom_components/.DS_Store
+HACS/custom_components/dsc_neo/.DS_Store
+src/demolog.txt
+NEO_Panels_HS2XXX_v150.bin
+
+NEO_Panels_HS2XXX_v150.flash

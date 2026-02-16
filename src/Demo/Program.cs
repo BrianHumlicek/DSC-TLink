@@ -13,6 +13,7 @@
 //  You should have received a copy of the GNU General Public License
 //	along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+using DSC.TLink.Relay;
 using Microsoft.Extensions.Logging;
 
 namespace DSC.TLink.Demo
@@ -21,21 +22,83 @@ namespace DSC.TLink.Demo
 	{
 		static async Task Main(string[] args)
 		{
+			if (args.Length < 2)
+			{
+				Console.WriteLine("Usage: Demo <integrationId> <encryptionKey> [options]");
+				Console.WriteLine("  integrationId    - Your integration account ID (e.g. 2032000000)");
+				Console.WriteLine("  encryptionKey    - 32-char hex key matching [851][701] (e.g. 356523BF0473E03EB76E52157578C45C)");
+				Console.WriteLine("  --port <port>    - TCP listen port for panel (default: 3072)");
+				Console.WriteLine("  --relay-port <p> - TCP relay port for Home Assistant (default: 3078)");
+				Console.WriteLine("  --relay-ip <ip>  - IP address to bind relay to (default: 0.0.0.0)");
+				Console.WriteLine("  --relay-secret <s> - Shared secret for encrypted relay communication (required)");
+				Console.WriteLine("  --debug          - Enable debug logging (shows sequence numbers, raw data)");
+				Console.WriteLine("  --trace          - Enable trace logging (most verbose)");
+				return;
+			}
+
+			string integrationId = args[0];
+			string encryptionKey = args[1];
+			int port = 3072;
+			int relayPort = 3078;
+			string relayIp = "0.0.0.0";
+			string? relaySecret = null;
+			LogLevel logLevel = LogLevel.Information;
+
+			for (int i = 2; i < args.Length; i++)
+			{
+				switch (args[i].ToLower())
+				{
+					case "--port" when i + 1 < args.Length:
+						if (int.TryParse(args[++i], out int p)) port = p;
+						break;
+					case "--relay-port" when i + 1 < args.Length:
+						if (int.TryParse(args[++i], out int rp)) relayPort = rp;
+						break;
+					case "--relay-ip" when i + 1 < args.Length:
+						relayIp = args[++i];
+						break;
+					case "--relay-secret" when i + 1 < args.Length:
+						relaySecret = args[++i];
+						break;
+					case "--debug":
+						logLevel = LogLevel.Debug;
+						break;
+					case "--trace":
+						logLevel = LogLevel.Trace;
+						break;
+				}
+			}
+
 			MockServer server = new MockServer();
+			server.ServiceProvider.IntegrationId = integrationId;
+			server.ServiceProvider.EncryptionKey = encryptionKey;
 			server.ServiceProvider.LogFactory = LoggerFactory.Create((configure) =>
 			{
 				configure.AddProvider(new TextFileLoggerProvider());
-				configure.AddConsole();
-				configure.SetMinimumLevel(LogLevel.Debug);
+				configure.AddSimpleConsole(options =>
+				{
+					options.TimestampFormat = "yyyy-MM-dd HH:mm:ss ";
+				});
+				configure.SetMinimumLevel(logLevel);
 			});
-			//3072 local
-			//3097 on VPN
-			Task listenTask = server.TcpListen(3072);
-			Console.ReadKey();
-			if (!listenTask.IsCompleted)
+
+			if (string.IsNullOrEmpty(relaySecret))
 			{
-				server.Stop();
+				Console.WriteLine("Error: --relay-secret is required");
+				return;
 			}
+
+			var relay = new JsonRelay(server.ServiceProvider.LogFactory, server.shutdownToken, relaySecret);
+			server.ServiceProvider.Relay = relay;
+
+			Console.CancelKeyPress += (sender, e) =>
+			{
+				e.Cancel = true;
+				server.Stop();
+			};
+			Task relayTask = relay.StartListening(relayPort, relayIp);
+			Task listenTask = server.TcpListenUntilStopped(port);
+			await Task.WhenAny(listenTask, relayTask);
 		}
 	}
 }
